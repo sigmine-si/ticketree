@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모노 스튜디오 — 관리자</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --page:#F6F6F2;
+  --paper:#FFFFFF;
+  --ink:#1B1F1C;
+  --sub:#5C635E;
+  --faint:#9AA09B;
+  --line:#E5E6E0;
+  --line-strong:#CFD1C9;
+  --green:#1E6B4E;
+  --green-deep:#14503A;
+  --green-tint:#E9F3EE;
+  --amber:#A8700F;
+  --amber-tint:#FBF1DC;
+  --red:#A83226;
+  --red-tint:#FAECEA;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'Pretendard Variable',Pretendard,-apple-system,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--page);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;}
+button{font-family:var(--sans);cursor:pointer;}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px;}
+
+.topbar{background:var(--ink);}
+.topbar-in{max-width:1120px;margin:0 auto;padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;}
+.brand{display:flex;align-items:center;gap:14px;}
+.wordmark{font-weight:700;font-size:15px;color:#fff;letter-spacing:-0.01em;}
+.wordmark .dot{color:#6FBF9A;}
+.admin-tag{font-family:var(--mono);font-size:10.5px;color:#9DB5A8;border:1px solid #3A423C;border-radius:5px;padding:2px 8px;letter-spacing:.04em;}
+.nav{display:flex;gap:2px;margin-left:8px;}
+.nav-link{background:none;border:none;font-size:13.5px;color:#A9B1AB;padding:6px 12px;border-radius:7px;}
+.nav-link:hover{color:#fff;}
+.nav-link.on{color:#fff;font-weight:600;background:#2C332E;}
+.top-right{display:flex;align-items:center;gap:12px;}
+.runner-chip{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;color:#9DB5A8;border:1px solid #3A423C;border-radius:999px;padding:4px 12px;}
+.runner-chip .pulse{width:7px;height:7px;border-radius:50%;background:#6FBF9A;animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.runner-chip .pulse{animation:none;}*{transition:none!important;}.view.on{animation:none;}}
+.avatar{width:29px;height:29px;border-radius:50%;background:#2C332E;color:#B8C4BC;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;}
+
+.wrap{max-width:1120px;margin:0 auto;padding:30px 28px 64px;}
+
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+.page-head h1{font-size:22px;font-weight:700;letter-spacing:-0.02em;}
+.page-head .sub{font-size:13.5px;color:var(--sub);margin-top:3px;}
+
+.ledger{display:grid;grid-template-columns:repeat(4,1fr);background:var(--paper);border:1px solid var(--line);border-radius:12px;margin-bottom:24px;overflow:hidden;}
+.ledger>div{padding:15px 20px;}
+.ledger>div+div{border-left:1px solid var(--line);}
+.ledger .k{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.ledger .v{font-family:var(--mono);font-size:18px;font-weight:500;}
+.ledger .v small{font-family:var(--sans);font-size:12px;font-weight:400;color:var(--faint);margin-left:5px;}
+.dot-amber{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none;}
+.dot-green{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none;}
+
+.btn{border:1px solid var(--line-strong);background:var(--paper);border-radius:8px;padding:9px 16px;font-size:13.5px;font-weight:500;color:var(--ink);transition:background .12s;}
+.btn:hover{background:var(--page);}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff;}
+.btn-primary:hover{background:var(--green-deep);}
+.btn-danger{color:var(--red);border-color:#E4C7C3;}
+.btn-danger:hover{background:var(--red-tint);}
+.btn:active{transform:scale(.985);}
+.btn:disabled{opacity:.6;cursor:default;}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);}
+.tab{background:none;border:none;padding:9px 14px 11px;font-size:13.5px;color:var(--sub);border-bottom:2px solid transparent;margin-bottom:-1px;}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ink);}
+.tab .n{font-family:var(--mono);font-size:12px;color:var(--faint);margin-left:5px;}
+.tabs .spacer{flex:1;}
+.search{display:flex;align-items:center;gap:7px;color:var(--faint);font-size:13px;padding:9px 4px;}
+.search svg{width:15px;height:15px;}
+
+.table-card{background:var(--paper);border:1px solid var(--line);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;background:var(--paper);}
+th{font-size:11.5px;font-weight:500;color:var(--faint);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);letter-spacing:.02em;}
+th.r,td.r{text-align:right;}
+td{padding:13px 14px;font-size:14px;border-bottom:1px solid var(--line);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tbody tr{cursor:pointer;transition:background .1s;}
+tbody tr:hover{background:#FAFAF7;}
+tbody tr:focus-visible{outline:2px solid var(--green);outline-offset:-2px;}
+.tno{font-family:var(--mono);font-size:12px;color:var(--faint);width:64px;padding-left:20px;white-space:nowrap;}
+.proj-cell{width:150px;}
+.proj-cell .p{font-size:13px;font-weight:500;}
+.proj-cell .c{font-size:12px;color:var(--faint);}
+.ttl{font-weight:500;letter-spacing:-0.01em;}
+.ttl .need{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);margin-right:8px;vertical-align:2px;}
+.ttl .need.err{background:var(--red);}
+.ttl .meta{display:block;font-size:12px;font-weight:400;color:var(--faint);margin-top:2px;}
+.ttl .meta a{color:var(--green);text-decoration:none;}
+.ttl .meta a:hover{text-decoration:underline;}
+.ttl .meta .warn{color:var(--red);}
+.act-cell{width:132px;}
+.chip-act{font-size:12px;font-weight:600;border-radius:999px;padding:5px 12px;white-space:nowrap;border:none;}
+.chip-act.amber{background:var(--amber-tint);color:var(--amber);}
+.chip-act.green{background:var(--green-tint);color:var(--green-deep);}
+.chip-act.gray{background:var(--page);color:var(--sub);font-weight:500;}
+.chip-act.red{background:var(--red-tint);color:var(--red);}
+.amt{font-family:var(--mono);font-size:13px;width:128px;padding-right:16px;}
+.amt .cost{display:block;font-size:11px;color:var(--faint);}
+.amt .tbd{color:var(--faint);font-family:var(--sans);font-size:12.5px;}
+.upd{font-size:12.5px;color:var(--faint);width:86px;padding-right:20px;white-space:nowrap;}
+.tfoot{display:flex;justify-content:space-between;align-items:center;padding:11px 20px;font-size:12.5px;color:var(--faint);border-top:1px solid var(--line);}
+
+.view{display:none;}
+.view.on{display:block;animation:fade .18s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+.back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--sub);font-size:13.5px;padding:4px 6px 4px 0;margin-bottom:16px;border-radius:6px;}
+.back:hover{color:var(--ink);}
+.back svg{width:15px;height:15px;}
+
+.detail-grid{display:grid;grid-template-columns:1fr 316px;gap:16px;align-items:start;}
+.dmain{min-width:0;display:flex;flex-direction:column;gap:14px;}
+.dside{position:sticky;top:20px;display:flex;flex-direction:column;gap:14px;}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 20px;}
+.card .ch{font-size:13px;font-weight:600;margin-bottom:4px;}
+.card .cs{font-size:12.5px;color:var(--faint);margin-bottom:12px;}
+
+.detail-head{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px 24px;}
+.detail-head .row1{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.detail-head .tno-big{font-family:var(--mono);font-size:12.5px;color:var(--faint);}
+.detail-head h2{font-size:19px;font-weight:700;letter-spacing:-0.02em;margin-top:2px;}
+.detail-head .when{font-size:13px;color:var(--sub);margin-top:4px;}
+.pill{font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;white-space:nowrap;}
+.pill.amber{background:var(--amber-tint);color:var(--amber);}
+.pill.green{background:var(--green-tint);color:var(--green-deep);}
+
+.diff{background:#FBFBF8;border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:12.5px;line-height:1.7;overflow:hidden;}
+.diff .fname{padding:8px 14px;border-bottom:1px solid var(--line);color:var(--sub);font-size:11.5px;background:var(--paper);display:flex;justify-content:space-between;}
+.diff .fname .stat{color:var(--green-deep);}
+.dl{display:flex;padding:1px 14px;white-space:pre-wrap;color:var(--sub);}
+.dl .g{width:20px;flex:none;color:var(--faint);user-select:none;}
+.dl.add{background:#EAF5EE;color:var(--green-deep);}
+.dl.add .g{color:var(--green);}
+.dl.ctx{color:var(--faint);}
+
+.qa{border-top:1px solid var(--line);padding:10px 0;font-size:13.5px;}
+.qa:first-of-type{border-top:none;padding-top:2px;}
+.qa .q{color:var(--sub);margin-bottom:2px;}
+.qa .a{font-weight:500;}
+.qa .a::before{content:"→ ";color:var(--green);}
+
+.note{font-size:13.5px;line-height:1.7;}
+.note .files{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;}
+.ftag{font-family:var(--mono);font-size:11.5px;background:var(--page);border:1px solid var(--line);border-radius:5px;padding:2px 8px;color:var(--sub);}
+
+.est-figs{display:flex;flex-direction:column;gap:0;}
+.efrow{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:13px;color:var(--sub);}
+.efrow:first-of-type{border-top:none;}
+.efrow .ev{font-family:var(--mono);font-size:13.5px;color:var(--ink);}
+.efrow .ev.dim{color:var(--faint);}
+.efrow.total{border-top:1px solid var(--line-strong);margin-top:2px;padding-top:11px;}
+.efrow.total .ev{font-size:16px;font-weight:500;}
+.margin-note{font-size:11.5px;color:var(--faint);margin-top:6px;}
+.price-edit{display:flex;align-items:center;gap:8px;margin-top:12px;}
+.price-edit input{flex:1;border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px;font-size:14px;font-family:var(--mono);text-align:right;color:var(--ink);}
+.price-edit input:focus{outline:2px solid var(--green);outline-offset:-1px;border-color:transparent;}
+.side-actions{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+.side-actions .btn{width:100%;padding:11px;}
+.approve-note{font-size:12px;color:var(--faint);text-align:center;line-height:1.5;margin-top:2px;}
+
+.jobline{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--sub);padding:7px 0;border-top:1px solid var(--line);}
+.jobline:first-of-type{border-top:none;}
+.jobline .jid{font-family:var(--mono);font-size:11.5px;color:var(--faint);}
+.jobline .jv{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--sub);}
+.jobline .ok{color:var(--green);}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:#fff;font-size:13.5px;padding:10px 18px;border-radius:999px;opacity:0;transition:all .25s;pointer-events:none;z-index:60;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media (max-width:860px){
+  .detail-grid{grid-template-columns:1fr;}
+  .dside{position:static;}
+  .ledger{grid-template-columns:1fr 1fr;}
+  .ledger>div{border-top:1px solid var(--line);}
+  .amt,.upd,th.amt,th.upd{display:none;}
+  .proj-cell{width:auto;}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <span class="wordmark">mono<span class="dot">.</span>studio</span>
+      <span class="admin-tag">ADMIN</span>
+      <nav class="nav" aria-label="주 메뉴">
+        <button class="nav-link on">검토 큐</button>
+        <button class="nav-link">프로젝트</button>
+        <button class="nav-link">Job</button>
+        <button class="nav-link">정산</button>
+      </nav>
+    </div>
+    <div class="top-right">
+      <div class="runner-chip"><span class="pulse"></span>runner 1/1 · queue 2</div>
+      <div class="avatar">박</div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ===================== 검토 큐 (메인) ===================== -->
+<section class="view on" id="view-queue">
+
+  <div class="page-head">
+    <div>
+      <h1>검토 큐</h1>
+      <p class="sub">내 결정을 기다리는 순서대로 정렬되어 있어요</p>
+    </div>
+    <button class="btn">프로젝트 추가</button>
+  </div>
+
+  <div class="ledger">
+    <div>
+      <div class="k"><span class="dot-amber"></span>검토 대기</div>
+      <div class="v">3<small>건</small></div>
+    </div>
+    <div>
+      <div class="k"><span class="dot-green"></span>실행 중 job</div>
+      <div class="v">1<small>대기 2건</small></div>
+    </div>
+    <div>
+      <div class="k">오늘 AI 원가</div>
+      <div class="v">₩48,200<small>job 14회</small></div>
+    </div>
+    <div>
+      <div class="k">7월 확정 견적</div>
+      <div class="v">₩3,420,000<small>원가율 4.1%</small></div>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab on">검토 대기<span class="n">3</span></button>
+    <button class="tab">진행 중<span class="n">4</span></button>
+    <button class="tab">전체<span class="n">31</span></button>
+    <div class="spacer"></div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      검색
+    </div>
+  </div>
+
+  <div class="table-card">
+  <table>
+    <thead>
+      <tr>
+        <th class="tno">번호</th>
+        <th class="proj-cell">프로젝트</th>
+        <th>요청</th>
+        <th class="act-cell">필요한 결정</th>
+        <th class="r amt">견적 · 원가</th>
+        <th class="r upd">업데이트</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <tr tabindex="0" onclick="openReview()" onkeydown="if(event.key==='Enter')openReview()">
+        <td class="tno">REQ-014</td>
+        <td class="proj-cell"><div class="p">카페 주문 앱</div><div class="c">김서연</div></td>
+        <td class="ttl"><span class="need"></span>쿠폰 기능 추가<span class="meta">클라이언트 견적 승인 완료 — Spec 변경안 검토 필요</span></td>
+        <td class="act-cell"><span class="chip-act amber">Spec 승인</span></td>
+        <td class="r amt">₩520,000<span class="cost">원가 ₩12,400</span></td>
+        <td class="r upd">5분 전</td>
+      </tr>
+
+      <tr tabindex="0">
+        <td class="tno">REQ-031</td>
+        <td class="proj-cell"><div class="p">꽃집 정기배송</div><div class="c">이하늘</div></td>
+        <td class="ttl"><span class="need"></span>배송 주기 변경 기능<span class="meta">구현 PR 생성됨 · 테스트 통과 · <a href="#" onclick="event.stopPropagation();return false;">미리보기 ↗</a></span></td>
+        <td class="act-cell"><span class="chip-act amber">배포 승인</span></td>
+        <td class="r amt">₩780,000<span class="cost">원가 ₩31,800</span></td>
+        <td class="r upd">20분 전</td>
+      </tr>
+
+      <tr tabindex="0">
+        <td class="tno">REQ-007</td>
+        <td class="proj-cell"><div class="p">필라테스 예약</div><div class="c">정민아</div></td>
+        <td class="ttl"><span class="need err"></span>회원권 정지 기능<span class="meta"><span class="warn">에이전트 질문</span> — Spec과 기존 환불 규칙이 충돌해요. 해석이 필요합니다</span></td>
+        <td class="act-cell"><span class="chip-act red">답변 필요</span></td>
+        <td class="r amt"><span class="tbd">보류</span></td>
+        <td class="r upd">1시간 전</td>
+      </tr>
+
+      <tr tabindex="0">
+        <td class="tno">REQ-015</td>
+        <td class="proj-cell"><div class="p">카페 주문 앱</div><div class="c">김서연</div></td>
+        <td class="ttl">푸시 알림 기능<span class="meta">탐색 job 실행 중 · 12,400 tokens</span></td>
+        <td class="act-cell"><span class="chip-act gray">진행 중</span></td>
+        <td class="r amt"><span class="tbd">산출 중</span></td>
+        <td class="r upd">방금</td>
+      </tr>
+
+      <tr tabindex="0">
+        <td class="tno">REQ-029</td>
+        <td class="proj-cell"><div class="p">꽃집 정기배송</div><div class="c">이하늘</div></td>
+        <td class="ttl">상품 사진 일괄 업로드<span class="meta">구현 job 큐 대기 2번</span></td>
+        <td class="act-cell"><span class="chip-act gray">대기</span></td>
+        <td class="r amt">₩150,000<span class="cost">원가 —</span></td>
+        <td class="r upd">어제</td>
+      </tr>
+
+      <tr tabindex="0">
+        <td class="tno">REQ-028</td>
+        <td class="proj-cell"><div class="p">필라테스 예약</div><div class="c">정민아</div></td>
+        <td class="ttl">수업 대기 명단<span class="meta">7월 16일 배포 완료</span></td>
+        <td class="act-cell"><span class="chip-act green">완료</span></td>
+        <td class="r amt">₩450,000<span class="cost">원가 ₩22,100</span></td>
+        <td class="r upd">7월 16일</td>
+      </tr>
+
+    </tbody>
+  </table>
+  <div class="tfoot">
+    <span>31건 중 6건 표시</span>
+    <span>정렬: 결정 필요 우선</span>
+  </div>
+  </div>
+
+</section>
+
+<!-- ===================== 검토 상세 ===================== -->
+<section class="view" id="view-review">
+
+  <button class="back" onclick="closeReview()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    검토 큐
+  </button>
+
+  <div class="detail-head" style="margin-bottom:14px;">
+    <div class="row1">
+      <div>
+        <div class="tno-big">REQ-014 · 카페 주문 앱 · 김서연</div>
+        <h2>쿠폰 기능 추가</h2>
+        <p class="when">클라이언트 견적 승인 7월 20일 11:42 — Spec 변경안을 확인하고 개발을 시작하세요</p>
+      </div>
+      <span class="pill amber" id="review-pill">Spec 승인 대기</span>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="dmain">
+
+      <div class="card">
+        <p class="ch">Spec 변경안</p>
+        <p class="cs">승인하면 이 diff가 명세에 반영되고 구현 job이 시작돼요 · <a href="#" style="color:var(--green);" onclick="return false;">GitHub PR #47 ↗</a></p>
+        <div class="diff">
+          <div class="fname"><span>specs/features/coupon.md</span><span class="stat">+2 기준</span></div>
+          <div class="dl ctx"><span class="g"> </span>## 수용 기준</div>
+          <div class="dl"><span class="g"> </span>- 회원이 음료를 주문하면 결제 완료 시점에 스탬프 1개 적립</div>
+          <div class="dl"><span class="g"> </span>- 주문 취소·환불 시 해당 주문의 스탬프 회수</div>
+          <div class="dl add"><span class="g">+</span>- 스탬프 10개 도달 시 무료 음료 쿠폰 자동 발급</div>
+          <div class="dl add"><span class="g">+</span>- 주문 화면에서 보유 쿠폰 자동 적용, 전체 음료 중 선택 가능</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="ch">탐색 노트</p>
+        <p class="cs">read-only job #j-2841 · 7분 소요</p>
+        <p class="note">적립 로직은 <b>결제 완료 웹훅</b>에 붙이는 게 안전합니다. 할인 계산이 <b>PriceCalculator</b>에 집중되어 있어 쿠폰 적용은 여기 확장으로 처리 가능. 기존 테스트 커버리지가 있어 회귀 위험은 낮음. 쿠폰 만료 정책이 Spec에 없어서 <b>기본 90일</b>로 제안했습니다 — 승인 전 확인 필요.</p>
+        <div class="files">
+          <span class="ftag">billing/webhook.ts</span>
+          <span class="ftag">billing/PriceCalculator.ts</span>
+          <span class="ftag">orders/checkout.tsx</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="ch">클라이언트 문답</p>
+        <p class="cs">구체화 단계에서 확정된 내용</p>
+        <div class="qa"><p class="q">적립 기준은 무엇으로 할까요?</p><p class="a">음료 주문 잔 수</p></div>
+        <div class="qa"><p class="q">무료 쿠폰은 어떤 메뉴까지 적용되나요?</p><p class="a">전체 음료 중 손님이 자유롭게 선택</p></div>
+      </div>
+
+    </div>
+
+    <aside class="dside">
+
+      <div class="card">
+        <p class="ch">견적</p>
+        <div class="est-figs">
+          <div class="efrow"><span>예상 작업</span><span class="ev">5.5h · 기능 2건</span></div>
+          <div class="efrow"><span>예상 AI 원가</span><span class="ev dim">₩14,000</span></div>
+          <div class="efrow"><span>검토·검수 시간</span><span class="ev dim">1.5h</span></div>
+          <div class="efrow total"><span>청구 금액</span><span class="ev">₩520,000</span></div>
+        </div>
+        <div class="price-edit">
+          <label for="price" style="font-size:12.5px;color:var(--sub);flex:none;">조정</label>
+          <input id="price" type="text" value="520,000">
+        </div>
+        <p class="margin-note">유사 규모 과거 7건 평균 원가 ₩13,200 · 평균 소요 4.8h</p>
+      </div>
+
+      <div class="card">
+        <p class="ch">이 요청의 job</p>
+        <div class="jobline"><span class="jid">#j-2841</span>탐색 (read-only)<span class="jv ok">완료 · ₩3,100</span></div>
+        <div class="jobline"><span class="jid">#j-2847</span>견적 산출<span class="jv ok">완료 · ₩1,900</span></div>
+        <div class="jobline"><span class="jid">—</span>구현<span class="jv">승인 시 큐 등록</span></div>
+      </div>
+
+      <div class="side-actions">
+        <button class="btn btn-primary" id="approve-btn" onclick="approveSpec(this)">Spec 승인 · 개발 시작</button>
+        <button class="btn">수정 요청</button>
+        <button class="btn btn-danger">반려</button>
+        <p class="approve-note">승인하면 PR #47이 머지되고<br>구현 job이 큐에 등록됩니다 (현재 대기 2건)</p>
+      </div>
+
+    </aside>
+  </div>
+
+</section>
+
+<div class="toast" id="toast"></div>
+</main>
+
+<script>
+function openReview(){
+  document.getElementById('view-queue').classList.remove('on');
+  document.getElementById('view-review').classList.add('on');
+  window.scrollTo({top:0});
+}
+function closeReview(){
+  document.getElementById('view-review').classList.remove('on');
+  document.getElementById('view-queue').classList.add('on');
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
+function approveSpec(btn){
+  btn.textContent='승인 완료 — 구현 job 큐 등록됨';
+  btn.disabled=true;
+  document.getElementById('review-pill').textContent='개발 대기 · 큐 3번';
+  document.getElementById('review-pill').className='pill green';
+  toast('Spec PR #47을 머지하고 구현 job을 등록했어요');
+}
+</script>
+</body>
+</html>

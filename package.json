@@ -1,0 +1,26 @@
+{
+  "name": "ticketree",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "db:up": "docker compose up -d db && node scripts/wait-for-db.mjs",
+    "db:down": "docker compose down",
+    "db:push": "pnpm --filter @ticketree/shared db:push",
+    "db:studio": "pnpm --filter @ticketree/shared db:studio",
+    "seed": "pnpm --filter @ticketree/shared seed",
+    "dev": "pnpm --parallel --filter @ticketree/web --filter @ticketree/runner dev",
+    "dev:web": "pnpm --filter @ticketree/web dev",
+    "dev:runner": "pnpm --filter @ticketree/runner dev",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp"]
+  }
+}

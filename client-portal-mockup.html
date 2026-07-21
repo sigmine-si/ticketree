@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>모노 스튜디오 — 클라이언트 포털</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --page:#F6F6F2;
+  --paper:#FFFFFF;
+  --ink:#1B1F1C;
+  --sub:#5C635E;
+  --faint:#9AA09B;
+  --line:#E5E6E0;
+  --line-strong:#CFD1C9;
+  --green:#1E6B4E;
+  --green-deep:#14503A;
+  --green-tint:#E9F3EE;
+  --amber:#A8700F;
+  --amber-tint:#FBF1DC;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'Pretendard Variable',Pretendard,-apple-system,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{font-size:16px;}
+body{background:var(--page);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;}
+button{font-family:var(--sans);cursor:pointer;}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px;}
+
+.topbar{background:var(--paper);border-bottom:1px solid var(--line);}
+.topbar-in{max-width:1060px;margin:0 auto;padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;}
+.brand{display:flex;align-items:baseline;gap:12px;}
+.wordmark{font-weight:700;font-size:15px;letter-spacing:-0.01em;}
+.wordmark .dot{color:var(--green);}
+.proj{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--sub);background:none;border:none;padding:6px 8px;border-radius:6px;}
+.proj:hover{background:var(--page);}
+.proj svg{width:13px;height:13px;stroke:var(--faint);}
+.top-right{display:flex;align-items:center;gap:14px;}
+.icon-btn{background:none;border:none;color:var(--sub);display:flex;padding:6px;border-radius:6px;position:relative;}
+.icon-btn:hover{background:var(--page);}
+.icon-btn svg{width:18px;height:18px;}
+.icon-btn .ping{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--amber);border:1.5px solid var(--paper);}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--green-tint);color:var(--green-deep);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;}
+
+.wrap{max-width:1060px;margin:0 auto;padding:32px 28px 64px;}
+
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px;}
+.page-head h1{font-size:23px;font-weight:700;letter-spacing:-0.02em;}
+.page-head .sub{font-size:13.5px;color:var(--sub);margin-top:3px;}
+.btn{border:1px solid var(--line-strong);background:var(--paper);border-radius:8px;padding:9px 16px;font-size:13.5px;font-weight:500;color:var(--ink);transition:background .12s;}
+.btn:hover{background:var(--page);}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff;display:inline-flex;align-items:center;gap:7px;}
+.btn-primary:hover{background:var(--green-deep);}
+.btn-primary svg{width:14px;height:14px;}
+.btn:active{transform:scale(.985);}
+
+.ledger{display:grid;grid-template-columns:repeat(3,1fr);background:var(--paper);border:1px solid var(--line);border-radius:12px;margin-bottom:26px;overflow:hidden;}
+.ledger>div{padding:16px 20px;}
+.ledger>div+div{border-left:1px solid var(--line);}
+.ledger .k{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.ledger .v{font-family:var(--mono);font-size:19px;font-weight:500;letter-spacing:-0.01em;}
+.ledger .v small{font-family:var(--sans);font-size:12.5px;font-weight:400;color:var(--faint);margin-left:6px;}
+.dot-amber{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none;}
+.dot-green{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none;}
+.ledger .act{cursor:pointer;transition:background .12s;}
+.ledger .act:hover{background:#FDFBF5;}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:0;}
+.tab{background:none;border:none;padding:9px 14px 11px;font-size:13.5px;color:var(--sub);border-bottom:2px solid transparent;margin-bottom:-1px;}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ink);}
+.tab .n{font-family:var(--mono);font-size:12px;color:var(--faint);margin-left:5px;}
+.tab.on .n{color:var(--sub);}
+.tabs .spacer{flex:1;}
+.search{display:flex;align-items:center;gap:7px;color:var(--faint);font-size:13px;padding:9px 4px;}
+.search svg{width:15px;height:15px;}
+
+table{width:100%;border-collapse:collapse;background:var(--paper);}
+.table-card{background:var(--paper);border:1px solid var(--line);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;}
+th{font-size:11.5px;font-weight:500;color:var(--faint);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);letter-spacing:.02em;}
+th.r,td.r{text-align:right;}
+td{padding:14px;font-size:14px;border-bottom:1px solid var(--line);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tbody tr{cursor:pointer;transition:background .1s;}
+tbody tr:hover{background:#FAFAF7;}
+tbody tr:focus-visible{outline:2px solid var(--green);outline-offset:-2px;}
+.tno{font-family:var(--mono);font-size:12.5px;color:var(--faint);width:52px;padding-left:22px;}
+.ttl{font-weight:500;letter-spacing:-0.01em;}
+.ttl .need{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);margin-right:8px;vertical-align:2px;}
+.ttl .meta{display:block;font-size:12px;font-weight:400;color:var(--faint);margin-top:2px;}
+.ttl .meta a{color:var(--green);text-decoration:none;}
+.ttl .meta a:hover{text-decoration:underline;}
+.stage-cell{width:190px;}
+.track{display:flex;gap:3px;margin-bottom:5px;}
+.seg{height:4px;flex:1;border-radius:2px;background:var(--line);}
+.seg.done{background:var(--green);}
+.seg.cur{background:var(--amber);}
+.seg.cur.ours{background:var(--green);opacity:.45;}
+.stage-label{font-size:12px;color:var(--sub);}
+.stage-label.wait{color:var(--amber);font-weight:600;}
+.stage-label.run{color:var(--sub);}
+.stage-label.fin{color:var(--faint);}
+.amt{font-family:var(--mono);font-size:13.5px;width:120px;padding-right:18px;}
+.amt .range{color:var(--sub);}
+.amt .tbd{color:var(--faint);font-family:var(--sans);font-size:12.5px;}
+.upd{font-size:12.5px;color:var(--faint);width:92px;padding-right:22px;white-space:nowrap;}
+.tfoot{display:flex;justify-content:space-between;align-items:center;padding:11px 22px;font-size:12.5px;color:var(--faint);border-top:1px solid var(--line);background:var(--paper);}
+.tfoot button{background:none;border:none;color:var(--sub);font-size:12.5px;display:flex;align-items:center;gap:4px;}
+.tfoot button:hover{color:var(--ink);}
+
+.stage-busy{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);}
+.spin{width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:rot .8s linear infinite;flex:none;}
+@keyframes rot{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none;border-top-color:var(--green);}}
+
+.view{display:none;}
+.view.on{display:block;animation:fade .18s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){.view.on{animation:none;}*{transition:none!important;}}
+
+.back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--sub);font-size:13.5px;padding:4px 6px 4px 0;margin-bottom:16px;border-radius:6px;}
+.back:hover{color:var(--ink);}
+.back svg{width:15px;height:15px;}
+
+.detail-head{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:22px 24px 20px;margin-bottom:14px;}
+.detail-head .row1{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.detail-head .tno-big{font-family:var(--mono);font-size:13px;color:var(--faint);}
+.detail-head h2{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-top:2px;}
+.detail-head .when{font-size:13px;color:var(--sub);margin-top:4px;}
+.pill{font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;white-space:nowrap;}
+.pill.amber{background:var(--amber-tint);color:var(--amber);}
+.pill.green{background:var(--green-tint);color:var(--green-deep);}
+.big-track{display:flex;gap:4px;margin-top:18px;}
+.big-track .bseg{flex:1;}
+.big-track .bar{height:5px;border-radius:3px;background:var(--line);}
+.big-track .bar.done{background:var(--green);}
+.big-track .bar.cur{background:var(--amber);}
+.big-track .bl{font-size:11.5px;color:var(--faint);margin-top:6px;}
+.big-track .bl.done{color:var(--green-deep);}
+.big-track .bl.cur{color:var(--amber);font-weight:600;}
+
+.thread{display:flex;flex-direction:column;gap:12px;}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 20px;}
+.card-head{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
+.mini-avatar{width:26px;height:26px;border-radius:50%;background:var(--green-tint);color:var(--green-deep);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex:none;}
+.card-head .who{font-size:13px;font-weight:600;}
+.card-head .when{font-size:12px;color:var(--faint);}
+.card p.body{font-size:14.5px;line-height:1.65;}
+
+.sysline{display:flex;align-items:center;gap:9px;padding:2px 6px;font-size:13px;color:var(--sub);}
+.sysline svg{width:15px;height:15px;stroke:var(--faint);flex:none;}
+.sysline .t{margin-left:auto;font-size:12px;color:var(--faint);}
+
+.qcard{border-color:var(--line-strong);}
+.qcard .qhead{display:flex;align-items:center;gap:9px;margin-bottom:4px;}
+.qcard .qhead .who{font-size:13px;font-weight:600;}
+.qbadge{font-family:var(--mono);font-size:11.5px;background:var(--page);border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--sub);margin-left:auto;}
+.q{border-top:1px solid var(--line);padding:15px 0 13px;}
+.q:first-of-type{border-top:none;padding-top:8px;}
+.q .qt{font-size:14.5px;font-weight:500;margin-bottom:3px;}
+.q .qs{font-size:12.5px;color:var(--faint);margin-bottom:10px;}
+.chips{display:flex;gap:8px;flex-wrap:wrap;}
+.chip{border:1px solid var(--line-strong);background:var(--paper);border-radius:999px;padding:7px 14px;font-size:13px;color:var(--sub);transition:all .12s;}
+.chip:hover{border-color:var(--green);color:var(--green-deep);}
+.chip.sel{background:var(--green-tint);border-color:var(--green);color:var(--green-deep);font-weight:600;}
+.chip.sel::before{content:"✓ ";}
+.answer-row{display:flex;gap:8px;}
+.answer-row input{flex:1;border:1px solid var(--line-strong);border-radius:8px;padding:9px 12px;font-size:14px;font-family:var(--sans);color:var(--ink);}
+.answer-row input::placeholder{color:var(--faint);}
+.answer-row input:focus{outline:2px solid var(--green);outline-offset:-1px;border-color:transparent;}
+.answered{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--green-deep);background:var(--green-tint);border-radius:8px;padding:9px 12px;}
+.answered svg{width:15px;height:15px;flex:none;}
+
+.est .est-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+.est .est-head .t{font-size:13px;font-weight:600;}
+.est .est-head .note{font-size:12px;color:var(--faint);margin-left:auto;}
+.figures{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.fig{background:var(--page);border-radius:9px;padding:13px 15px;}
+.fig .k{font-size:12px;color:var(--sub);margin-bottom:3px;}
+.fig .v{font-family:var(--mono);font-size:18px;font-weight:500;letter-spacing:-0.01em;}
+.scope .sk{font-size:12.5px;color:var(--sub);margin-bottom:7px;}
+.scope-item{display:flex;gap:9px;font-size:13.5px;padding:7px 0;border-top:1px solid var(--line);}
+.scope-item svg{width:15px;height:15px;stroke:var(--green);flex:none;margin-top:3px;}
+.est-actions{display:flex;gap:9px;margin-top:16px;}
+
+.composer{display:flex;gap:9px;margin-top:14px;}
+.composer input{flex:1;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:12px 15px;font-size:14px;font-family:var(--sans);}
+.composer input::placeholder{color:var(--faint);}
+.composer input:focus{outline:2px solid var(--green);outline-offset:-1px;}
+
+.nav{display:flex;gap:2px;margin-left:10px;}
+.nav-link{background:none;border:none;font-size:13.5px;color:var(--sub);padding:6px 12px;border-radius:7px;}
+.nav-link:hover{background:var(--page);}
+.nav-link.on{color:var(--ink);font-weight:600;background:var(--page);}
+
+.spec-grid{display:grid;grid-template-columns:230px 1fr;gap:16px;align-items:start;}
+.spec-side{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px;position:sticky;top:20px;}
+.spec-side .sh{font-size:11.5px;color:var(--faint);letter-spacing:.02em;padding:6px 10px 8px;}
+.spec-item{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;text-align:left;font-size:13.5px;color:var(--sub);padding:9px 10px;border-radius:8px;font-family:var(--sans);}
+.spec-item:hover{background:var(--page);}
+.spec-item.on{background:var(--green-tint);color:var(--green-deep);font-weight:600;}
+.spec-item .flag{margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none;}
+.spec-item .flag.new{background:var(--green);}
+.spec-main{min-width:0;}
+.spec-head{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.spec-head h2{font-size:19px;font-weight:700;letter-spacing:-0.02em;}
+.spec-head .vline{font-size:12.5px;color:var(--faint);margin-top:4px;}
+.spec-head .vline .ver{font-family:var(--mono);color:var(--sub);}
+.callout{background:var(--amber-tint);border:1px solid #EAD9B4;border-radius:12px;padding:15px 18px;margin-bottom:14px;display:flex;gap:11px;font-size:13.5px;line-height:1.6;}
+.callout svg{width:17px;height:17px;stroke:var(--amber);flex:none;margin-top:2px;}
+.callout .ct{font-weight:600;color:var(--amber);}
+.callout a{color:var(--amber);font-weight:600;text-decoration:underline;cursor:pointer;}
+.crit-card .ch{font-size:13px;font-weight:600;margin-bottom:4px;}
+.crit-card .cs{font-size:12.5px;color:var(--faint);margin-bottom:12px;}
+.crit{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14px;line-height:1.6;}
+.crit svg{width:16px;height:16px;stroke:var(--green);flex:none;margin-top:3px;}
+.crit.pending svg{stroke:var(--amber);}
+.crit.pending{color:var(--sub);}
+.crit .tag{font-family:var(--mono);font-size:11px;color:var(--amber);background:var(--amber-tint);border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap;}
+.hist{margin-top:14px;}
+.hist-item{display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--line);font-size:13.5px;align-items:baseline;}
+.hist-item:first-of-type{border-top:none;}
+.hist-item .hv{font-family:var(--mono);font-size:12px;color:var(--sub);width:44px;flex:none;}
+.hist-item .hd{color:var(--faint);font-size:12.5px;margin-left:auto;white-space:nowrap;}
+.hist-item .hreq{font-family:var(--mono);font-size:11.5px;color:var(--green-deep);background:var(--green-tint);border-radius:4px;padding:1px 6px;cursor:pointer;}
+@media (max-width:720px){.spec-grid{grid-template-columns:1fr;}.spec-side{position:static;}}
+
+.chat{display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto;padding:4px 2px;margin:16px 0 10px;}
+.msg{max-width:88%;border-radius:12px;padding:10px 14px;font-size:13.5px;line-height:1.6;}
+.msg.user{align-self:flex-end;background:var(--green-tint);color:var(--green-deep);}
+.msg.user .as{display:block;font-size:12px;color:var(--sub);margin-bottom:3px;}
+.msg.sys{align-self:flex-start;background:var(--paper);border:1px solid var(--line);}
+.msg.sys .chips{margin-top:9px;}
+.status-line{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--faint);padding:2px 4px;}
+.spinner{width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:spin .9s linear infinite;flex:none;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none;border-top-color:var(--line-strong);}}
+.sum-figs{display:flex;gap:10px;margin:10px 0;}
+.sum-fig{background:var(--page);border-radius:8px;padding:8px 12px;flex:1;}
+.sum-fig .k{font-size:11.5px;color:var(--sub);}
+.sum-fig .v{font-family:var(--mono);font-size:14px;font-weight:500;}
+.sum-scope{font-size:13px;color:var(--sub);line-height:1.7;}
+.sum-actions{display:flex;gap:8px;margin-top:11px;}
+.escape{font-size:12px;color:var(--faint);text-align:center;margin-top:6px;}
+.escape a{color:var(--sub);text-decoration:underline;cursor:pointer;}
+
+.overlay{position:fixed;inset:0;background:rgba(27,31,28,.45);display:none;align-items:flex-start;justify-content:center;padding:7vh 20px 20px;z-index:50;}
+.overlay.on{display:flex;animation:fade .15s ease;}
+.modal{background:var(--paper);border-radius:14px;width:100%;max-width:560px;padding:26px 28px 24px;box-shadow:0 24px 60px rgba(27,31,28,.18);}
+.modal h3{font-size:18px;font-weight:700;letter-spacing:-0.02em;}
+.modal .msub{font-size:13px;color:var(--sub);margin:4px 0 20px;}
+.mfield{margin-bottom:18px;}
+.mfield label{display:block;font-size:13px;font-weight:600;margin-bottom:7px;}
+.mfield label small{font-weight:400;color:var(--faint);margin-left:6px;}
+.mfield textarea{width:100%;border:1px solid var(--line-strong);border-radius:10px;padding:12px 14px;font-size:14px;font-family:var(--sans);line-height:1.6;min-height:110px;resize:vertical;color:var(--ink);}
+.mfield textarea::placeholder{color:var(--faint);}
+.mfield textarea:focus{outline:2px solid var(--green);outline-offset:-1px;border-color:transparent;}
+.attach{display:flex;align-items:center;gap:9px;border:1px dashed var(--line-strong);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--sub);cursor:pointer;}
+.attach:hover{border-color:var(--green);color:var(--green-deep);}
+.attach svg{width:16px;height:16px;flex:none;}
+.mfoot{display:flex;align-items:center;gap:9px;margin-top:22px;}
+.mfoot .hint{font-size:12px;color:var(--faint);margin-right:auto;line-height:1.5;}
+.toast{position:sticky;bottom:20px;margin:20px auto 0;width:fit-content;background:var(--ink);color:#fff;font-size:13.5px;padding:10px 18px;border-radius:999px;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
+.toast.show{opacity:1;transform:none;}
+
+@media (max-width:720px){
+  .ledger{grid-template-columns:1fr;}
+  .ledger>div+div{border-left:none;border-top:1px solid var(--line);}
+  .stage-cell{width:130px;}
+  .amt,.upd{display:none;}
+  th.amt,th.upd{display:none;}
+  .figures{grid-template-columns:1fr;}
+  .big-track .bl{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <span class="wordmark">mono<span class="dot">.</span>studio</span>
+      <button class="proj">카페 주문 앱
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <nav class="nav" aria-label="주 메뉴">
+        <button class="nav-link on" id="nav-list" onclick="showView('list')">요청</button>
+        <button class="nav-link" id="nav-spec" onclick="showView('spec')">명세</button>
+      </nav>
+    </div>
+    <div class="top-right">
+      <button class="icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+        <span class="ping"></span>
+      </button>
+      <div class="avatar">김</div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ===================== 목록 뷰 ===================== -->
+<section class="view on" id="view-list">
+
+  <div class="page-head">
+    <div>
+      <h1>요청 내역</h1>
+      <p class="sub">클릭하면 대화와 견적을 확인할 수 있어요</p>
+    </div>
+    <button class="btn btn-primary" onclick="openNew()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+      새 요청
+    </button>
+  </div>
+
+  <div class="ledger">
+    <div class="act" onclick="filterTo('need')" role="button" tabindex="0">
+      <div class="k"><span class="dot-amber"></span>답변이 필요한 요청</div>
+      <div class="v">2<small>건 — 답변하면 바로 진행돼요</small></div>
+    </div>
+    <div>
+      <div class="k"><span class="dot-green"></span>진행 중</div>
+      <div class="v">3<small>건</small></div>
+    </div>
+    <div>
+      <div class="k">7월 확정 견적 합계</div>
+      <div class="v">₩1,150,000<small>5건</small></div>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab on" data-f="all" role="tab">전체<span class="n">12</span></button>
+    <button class="tab" data-f="need" role="tab">답변 필요<span class="n">2</span></button>
+    <button class="tab" data-f="run" role="tab">진행 중<span class="n">3</span></button>
+    <button class="tab" data-f="fin" role="tab">완료<span class="n">7</span></button>
+    <div class="spacer"></div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      검색
+    </div>
+  </div>
+
+  <div class="table-card">
+  <table>
+    <thead>
+      <tr>
+        <th class="tno">번호</th>
+        <th>요청</th>
+        <th class="stage-cell">진행</th>
+        <th class="r amt">견적</th>
+        <th class="r upd">업데이트</th>
+      </tr>
+    </thead>
+    <tbody id="rows">
+
+      <tr data-f="run" tabindex="0">
+        <td class="tno">15</td>
+        <td class="ttl">푸시 알림 기능<span class="meta">코드를 확인하고 있어요 — 잠시 후 질문 또는 견적이 도착합니다</span></td>
+        <td class="stage-cell">
+          <div class="stage-busy"><span class="spin" role="status" aria-label="확인 중"></span>코드 확인 중</div>
+        </td>
+        <td class="r amt"><span class="tbd">산출 중</span></td>
+        <td class="r upd">방금</td>
+      </tr>
+
+      <tr data-f="need" tabindex="0" onclick="openDetail()" onkeydown="if(event.key==='Enter')openDetail()">
+        <td class="tno">14</td>
+        <td class="ttl"><span class="need"></span>쿠폰 기능 추가<span class="meta">확인 질문 2건이 도착했어요</span></td>
+        <td class="stage-cell">
+          <div class="track"><span class="seg cur"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span></div>
+          <span class="stage-label wait">답변 필요</span>
+        </td>
+        <td class="r amt"><span class="range">45~60만</span></td>
+        <td class="r upd">10분 전</td>
+      </tr>
+
+      <tr data-f="need" tabindex="0">
+        <td class="tno">13</td>
+        <td class="ttl"><span class="need"></span>영업시간 표시 변경<span class="meta">견적이 확정 대기 중이에요 — 승인하면 개발이 시작됩니다</span></td>
+        <td class="stage-cell">
+          <div class="track"><span class="seg cur"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span></div>
+          <span class="stage-label wait">견적 확인</span>
+        </td>
+        <td class="r amt">₩80,000</td>
+        <td class="r upd">2시간 전</td>
+      </tr>
+
+      <tr data-f="run" tabindex="0">
+        <td class="tno">12</td>
+        <td class="ttl">결제 오류 수정</td>
+        <td class="stage-cell">
+          <div class="track"><span class="seg done"></span><span class="seg cur ours"></span><span class="seg"></span><span class="seg"></span></div>
+          <span class="stage-label run">개발 중</span>
+        </td>
+        <td class="r amt">₩300,000</td>
+        <td class="r upd">어제</td>
+      </tr>
+
+      <tr data-f="run" tabindex="0">
+        <td class="tno">11</td>
+        <td class="ttl">메뉴 이미지 업로드<span class="meta"><a href="#" onclick="event.stopPropagation();return false;">미리보기 열기 ↗</a> — 확인 후 배포됩니다</span></td>
+        <td class="stage-cell">
+          <div class="track"><span class="seg done"></span><span class="seg done"></span><span class="seg cur ours"></span><span class="seg"></span></div>
+          <span class="stage-label run">미리보기 확인</span>
+        </td>
+        <td class="r amt">₩250,000</td>
+        <td class="r upd">7월 16일</td>
+      </tr>
+
+      <tr data-f="fin" tabindex="0">
+        <td class="tno">10</td>
+        <td class="ttl">회원가입 간소화</td>
+        <td class="stage-cell">
+          <div class="track"><span class="seg done"></span><span class="seg done"></span><span class="seg done"></span><span class="seg done"></span></div>
+          <span class="stage-label fin">배포 완료</span>
+        </td>
+        <td class="r amt">₩400,000</td>
+        <td class="r upd">7월 12일</td>
+      </tr>
+
+      <tr data-f="fin" tabindex="0">
+        <td class="tno">9</td>
+        <td class="ttl">첫 화면 배너 교체</td>
+        <td class="stage-cell">
+          <div class="track"><span class="seg done"></span><span class="seg done"></span><span class="seg done"></span><span class="seg done"></span></div>
+          <span class="stage-label fin">배포 완료</span>
+        </td>
+        <td class="r amt">₩120,000</td>
+        <td class="r upd">7월 8일</td>
+      </tr>
+
+    </tbody>
+  </table>
+  <div class="tfoot">
+    <span>12건 중 7건 표시</span>
+    <button>더 보기
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  </div>
+  </div>
+
+</section>
+
+<!-- ===================== 상세 뷰 ===================== -->
+<section class="view" id="view-detail">
+
+  <button class="back" onclick="closeDetail()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    요청 내역
+  </button>
+
+  <div class="detail-head">
+    <div class="row1">
+      <div>
+        <div class="tno-big">REQ-014</div>
+        <h2>쿠폰 기능 추가</h2>
+        <p class="when">7월 18일 요청 · 담당 매니저 검토 후 진행됩니다</p>
+      </div>
+      <span class="pill amber" id="detail-pill">답변 필요 · 1건 남음</span>
+    </div>
+    <div class="big-track">
+      <div class="bseg"><div class="bar cur"></div><div class="bl cur">접수됨</div></div>
+      <div class="bseg"><div class="bar"></div><div class="bl">개발 중</div></div>
+      <div class="bseg"><div class="bar"></div><div class="bl">개발 완료</div></div>
+      <div class="bseg"><div class="bar"></div><div class="bl">배포 완료</div></div>
+    </div>
+  </div>
+
+  <div class="thread">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="mini-avatar">김</div>
+        <span class="who">김서연</span>
+        <span class="when">7월 18일 14:02</span>
+      </div>
+      <p class="body">단골 손님한테 쿠폰을 발급해주고 싶어요. 10잔 마시면 1잔 무료 같은 거요. 주문할 때 자동으로 적용되면 좋겠습니다.</p>
+    </div>
+
+    <div class="sysline">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      코드 확인을 마쳤어요 — 주문·결제 구조를 검토했습니다
+      <span class="t">14:11</span>
+    </div>
+
+    <div class="card qcard">
+      <div class="qhead">
+        <div class="mini-avatar" style="background:var(--page);color:var(--sub);">m.</div>
+        <span class="who">모노 스튜디오</span>
+        <span class="qbadge" id="qcount">1/2 답변됨</span>
+      </div>
+
+      <div class="q">
+        <p class="qt">1. 적립 기준은 무엇으로 할까요?</p>
+        <div class="answered">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>
+          음료 주문 잔 수 기준으로 답변했어요
+        </div>
+      </div>
+
+      <div class="q" id="q2">
+        <p class="qt">2. 무료 쿠폰은 어떤 메뉴까지 적용되나요?</p>
+        <p class="qs">보기에 없으면 아래에 직접 적어주세요</p>
+        <div class="chips" style="margin-bottom:10px;">
+          <button class="chip" onclick="pick(this)">아메리카노만</button>
+          <button class="chip" onclick="pick(this)">전체 음료 중 최저가 1잔</button>
+          <button class="chip" onclick="pick(this)">손님이 자유롭게 선택</button>
+        </div>
+        <div class="answer-row">
+          <input type="text" id="q2-input" placeholder="직접 입력 — 예: 시즌 한정 메뉴는 제외해주세요">
+          <button class="btn" onclick="answer()">답변 보내기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card est">
+      <div class="est-head">
+        <span class="t">예상 견적</span>
+        <span class="note" id="est-note">답변이 모두 모이면 확정돼요</span>
+      </div>
+      <div class="figures">
+        <div class="fig"><div class="k">예상 비용</div><div class="v" id="fig-cost">₩450,000~600,000</div></div>
+        <div class="fig"><div class="k">예상 기간</div><div class="v">3~4일</div></div>
+        <div class="fig"><div class="k">작업 범위</div><div class="v">기능 2건</div></div>
+      </div>
+      <div class="scope">
+        <p class="sk">포함되는 작업</p>
+        <div class="scope-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+          주문 완료 시 스탬프 적립, 10개 도달 시 쿠폰 자동 발급
+        </div>
+        <div class="scope-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+          주문 화면에서 보유 쿠폰 자동 적용 및 사용 내역 표시
+        </div>
+      </div>
+      <div class="est-actions">
+        <button class="btn btn-primary" onclick="approve(this)">견적 승인하고 진행</button>
+        <button class="btn">추가로 질문하기</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="composer">
+    <input type="text" placeholder="추가 요청이나 궁금한 점을 남겨주세요">
+    <button class="btn">보내기</button>
+  </div>
+
+</section>
+
+<!-- ===================== 명세 뷰 ===================== -->
+<section class="view" id="view-spec">
+
+  <div class="page-head">
+    <div>
+      <h1>서비스 명세</h1>
+      <p class="sub">지금 카페 주문 앱이 동작하기로 약속된 내용이에요 — 모든 요청과 견적은 이 문서를 기준으로 합니다</p>
+    </div>
+  </div>
+
+  <div class="spec-grid">
+    <aside class="spec-side">
+      <p class="sh">기능</p>
+      <button class="spec-item">주문</button>
+      <button class="spec-item">결제</button>
+      <button class="spec-item on">쿠폰·적립<span class="flag" title="변경 예정"></span></button>
+      <button class="spec-item">회원</button>
+      <button class="spec-item">메뉴 관리</button>
+      <button class="spec-item">알림<span class="flag new" title="신규 준비 중"></span></button>
+    </aside>
+
+    <div class="spec-main">
+      <div class="spec-head">
+        <div>
+          <h2>쿠폰·적립</h2>
+          <p class="vline"><span class="ver">v1.2</span> · 마지막 변경 7월 12일 · 배포 반영됨</p>
+        </div>
+        <span class="pill amber">변경 예정 1건</span>
+      </div>
+
+      <div class="callout">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+        <div>
+          <span class="ct">변경 예정</span> — <a onclick="openDetail()">REQ-014 쿠폰 기능 추가</a>가 진행 중이에요. 아래에 <span style="font-family:var(--mono);font-size:12px;">예정</span> 표시된 항목은 배포가 끝나면 이 명세에 정식으로 반영됩니다.
+        </div>
+      </div>
+
+      <div class="card crit-card">
+        <p class="ch">이렇게 동작해요</p>
+        <p class="cs">각 항목은 개발 완료 시 실제로 검증되는 기준이에요</p>
+        <div class="crit">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+          회원이 음료를 주문하면 결제 완료 시점에 스탬프가 1개 적립된다
+        </div>
+        <div class="crit">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+          적립 현황은 주문 완료 화면과 마이페이지에서 확인할 수 있다
+        </div>
+        <div class="crit">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+          주문 취소·환불 시 해당 주문으로 적립된 스탬프는 회수된다
+        </div>
+        <div class="crit pending">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          스탬프 10개 도달 시 무료 음료 쿠폰이 자동 발급된다<span class="tag">예정 · REQ-014</span>
+        </div>
+        <div class="crit pending">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          주문 화면에서 보유 쿠폰이 자동 적용되고 사용 내역이 표시된다<span class="tag">예정 · REQ-014</span>
+        </div>
+      </div>
+
+      <div class="card hist">
+        <p class="ch" style="font-size:13px;font-weight:600;margin-bottom:6px;">변경 이력</p>
+        <div class="hist-item">
+          <span class="hv">v1.2</span>
+          <span>취소·환불 시 스탬프 회수 규칙 추가</span>
+          <span class="hreq">REQ-008</span>
+          <span class="hd">7월 12일</span>
+        </div>
+        <div class="hist-item">
+          <span class="hv">v1.1</span>
+          <span>마이페이지 적립 현황 표시 추가</span>
+          <span class="hreq">REQ-005</span>
+          <span class="hd">6월 30일</span>
+        </div>
+        <div class="hist-item">
+          <span class="hv">v1.0</span>
+          <span>스탬프 적립 기능 최초 정의</span>
+          <span class="hreq">REQ-003</span>
+          <span class="hd">6월 21일</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<div class="overlay" id="new-overlay" onclick="if(event.target===this)closeNew()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="new-title">
+
+    <div id="phase-form">
+      <h3 id="new-title">새 요청</h3>
+      <p class="msub">편하게 적어주세요 — 보내면 코드를 확인하면서 이 자리에서 몇 가지 여쭤볼게요</p>
+
+      <div class="mfield">
+        <label for="new-asis"><span style="font-family:var(--mono);font-size:12px;color:var(--sub);">AS-IS</span> · 지금은 이래요</label>
+        <textarea id="new-asis" style="min-height:76px;" placeholder="예: 포장 주문 손님이 매장에 와서야 음료가 아직 준비 안 된 걸 알게 돼요."></textarea>
+      </div>
+
+      <div class="mfield">
+        <label for="new-tobe"><span style="font-family:var(--mono);font-size:12px;color:var(--green-deep);">TO-BE</span> · 이렇게 바뀌면 좋겠어요</label>
+        <textarea id="new-tobe" style="min-height:76px;" placeholder="예: 음료가 준비되면 손님이 알림을 받고, 앱에서 준비 상태를 볼 수 있으면 좋겠어요."></textarea>
+      </div>
+
+      <div class="mfield">
+        <label>참고 자료<small>화면 캡처나 링크가 있으면 훨씬 정확해져요</small></label>
+        <div class="attach" role="button" tabindex="0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.4 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 015.65 5.66l-9.2 9.19a2 2 0 01-2.82-2.83l8.49-8.48"/></svg>
+          파일을 끌어다 놓거나 클릭해서 첨부
+        </div>
+      </div>
+
+      <div class="mfield">
+        <label>언제까지 필요하세요?</label>
+        <div class="chips">
+          <button class="chip" onclick="pick(this)">급해요</button>
+          <button class="chip sel" onclick="pick(this)">이번 주 안에</button>
+          <button class="chip" onclick="pick(this)">여유 있어요</button>
+        </div>
+      </div>
+
+      <div class="mfoot">
+        <span class="hint">보내면 코드를 확인하고<br>필요한 것만 바로 여쭤봐요</span>
+        <button class="btn" onclick="closeNew()">취소</button>
+        <button class="btn btn-primary" onclick="startChat()">보내기</button>
+      </div>
+    </div>
+
+    <div id="phase-chat" style="display:none;">
+      <h3>요청 확인</h3>
+      <p class="msub">코드를 확인하며 내용을 확정하고 있어요</p>
+      <div class="chat" id="chat"></div>
+      <p class="escape">기다리지 않아도 돼요 — <a onclick="leaveChat()">닫아두면 준비됐을 때 알려드릴게요</a></p>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+</main>
+
+<script>
+function showView(name){
+  ['list','detail','spec'].forEach(v=>{
+    document.getElementById('view-'+v).classList.toggle('on',v===name);
+  });
+  document.getElementById('nav-list').classList.toggle('on',name!=='spec');
+  document.getElementById('nav-spec').classList.toggle('on',name==='spec');
+  window.scrollTo({top:0});
+}
+function openDetail(){showView('detail');}
+function closeDetail(){showView('list');}
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    applyFilter(t.dataset.f);
+  });
+});
+function applyFilter(f){
+  document.querySelectorAll('#rows tr').forEach(r=>{
+    r.style.display=(f==='all'||r.dataset.f===f)?'':'none';
+  });
+}
+function filterTo(f){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.f===f));
+  applyFilter(f);
+}
+function pick(el){
+  el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+function answer(){
+  const sel=document.querySelector('#q2 .chip.sel');
+  const txt=document.getElementById('q2-input').value.trim();
+  if(!sel&&!txt){toast('보기를 선택하거나 답변을 입력해주세요');return;}
+  const label=txt||sel.textContent.replace('✓ ','');
+  document.getElementById('q2').innerHTML=
+    '<p class="qt">2. 무료 쿠폰은 어떤 메뉴까지 적용되나요?</p>'+
+    '<div class="answered"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>'+label+' — 답변했어요</div>';
+  document.getElementById('qcount').textContent='2/2 답변됨';
+  document.getElementById('detail-pill').textContent='견적 확정 중';
+  document.getElementById('detail-pill').className='pill green';
+  document.getElementById('est-note').textContent='답변을 반영해 확정 견적을 계산하고 있어요';
+  toast('답변을 보냈어요 — 견적을 확정하고 있습니다');
+}
+let draftTitle='';
+function openNew(){
+  document.getElementById('new-overlay').classList.add('on');
+  setTimeout(()=>document.getElementById('new-asis').focus(),50);
+}
+function closeNew(){
+  document.getElementById('new-overlay').classList.remove('on');
+  document.getElementById('phase-form').style.display='';
+  document.getElementById('phase-chat').style.display='none';
+  document.getElementById('chat').innerHTML='';
+}
+function chatEl(){return document.getElementById('chat');}
+function scrollChat(){const c=chatEl();c.scrollTop=c.scrollHeight;}
+function addMsg(cls,html){
+  const d=document.createElement('div');
+  d.className='msg '+cls;d.innerHTML=html;
+  chatEl().appendChild(d);scrollChat();return d;
+}
+function addStatus(texts){
+  const d=document.createElement('div');
+  d.className='status-line';
+  d.innerHTML='<span class="spinner"></span><span class="st"></span>';
+  chatEl().appendChild(d);scrollChat();
+  let i=0;const st=d.querySelector('.st');st.textContent=texts[0];
+  d.dataset.iv=setInterval(()=>{i=(i+1)%texts.length;st.textContent=texts[i];},1500);
+  return d;
+}
+function removeStatus(d){clearInterval(d.dataset.iv);d.remove();}
+function startChat(){
+  const asis=document.getElementById('new-asis').value.trim();
+  const tobe=document.getElementById('new-tobe').value.trim();
+  if(!tobe){toast('TO-BE 칸에 원하는 모습을 한 줄이라도 적어주세요');return;}
+  draftTitle=tobe.length>18?tobe.slice(0,18)+'…':tobe;
+  document.getElementById('phase-form').style.display='none';
+  document.getElementById('phase-chat').style.display='';
+  addMsg('user',(asis?'<span class="as">지금: '+asis+'</span>':'')+tobe);
+  const s=addStatus(['관련 코드를 확인하고 있어요…','주문·알림 동작을 찾고 있어요…','질문을 정리하고 있어요…']);
+  setTimeout(()=>{
+    removeStatus(s);
+    const m=addMsg('sys','확인해보니 푸시 알림 모듈이 이미 있는데 꺼져 있었어요. 두 가지만 확인할게요.'+
+      '<div class="q"><p class="qt">1. 알림 방식은 어떤 게 좋으세요?</p><div class="chips">'+
+      '<button class="chip" onclick="answerQ(this)">앱 푸시 알림</button>'+
+      '<button class="chip" onclick="answerQ(this)">카카오 알림톡</button>'+
+      '<button class="chip" onclick="answerQ(this)">둘 다</button></div></div>'+
+      '<div class="q"><p class="qt">2. 준비 상태는 어디에 보이면 될까요?</p><div class="chips">'+
+      '<button class="chip" onclick="answerQ(this)">주문 내역 화면</button>'+
+      '<button class="chip" onclick="answerQ(this)">주문 완료 화면</button>'+
+      '<button class="chip" onclick="answerQ(this)">둘 다</button></div></div>');
+    m.dataset.round='1';
+  },4200);
+}
+function answerQ(el){
+  const label=el.textContent;
+  const msg=el.closest('.msg');
+  el.closest('.q').querySelector('.chips').outerHTML=
+    '<div class="answered"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="width:15px;height:15px;flex:none;"><path d="M20 6L9 17l-5-5"/></svg>'+label+'</div>';
+  scrollChat();
+  if(msg.querySelector('.chips'))return;
+  if(msg.dataset.round==='1'){
+    const s=addStatus(['카카오 알림톡 발송 조건을 확인하고 있어요…','연동 요건을 정리하고 있어요…']);
+    setTimeout(()=>{
+      removeStatus(s);
+      const m2=addMsg('sys','하나만 더요. 카카오 알림톡은 발신 프로필 등록(사업자 인증)이 필요해요. 등록되어 있나요?'+
+        '<div class="q"><div class="chips">'+
+        '<button class="chip" onclick="answerQ(this)">등록되어 있어요</button>'+
+        '<button class="chip" onclick="answerQ(this)">아직이에요 — 등록도 부탁해요</button>'+
+        '<button class="chip" onclick="answerQ(this)">그럼 앱 푸시만 할게요</button></div></div>');
+      m2.dataset.round='2';
+    },3200);
+  }else{
+    const s=addStatus(['답변을 반영해 정리하고 있어요…']);
+    setTimeout(()=>{
+      removeStatus(s);
+      addMsg('sys',
+        '<b>이렇게 진행할게요</b>'+
+        '<div class="sum-scope" style="margin-top:6px;">· 음료 준비 완료 시 손님에게 알림 발송<br>· 주문 화면에 준비 상태 표시<br>· 알림톡 발신 프로필 등록 지원 포함</div>'+
+        '<div class="sum-figs">'+
+        '<div class="sum-fig"><div class="k">예상 비용</div><div class="v">40~55만원</div></div>'+
+        '<div class="sum-fig"><div class="k">예상 기간</div><div class="v">3~4일</div></div>'+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--faint);">확정 견적은 검토 후 알려드려요</div>'+
+        '<div class="sum-actions">'+
+        '<button class="btn btn-primary" onclick="confirmRequest()">이 내용으로 요청하기</button>'+
+        '<button class="btn" onclick="toast(\'수정할 내용을 채팅으로 이어서 보내면 돼요\')">내용 고치기</button>'+
+        '</div>');
+    },2600);
+  }
+}
+function addTicketRow(metaText,stageLabel,amtHtml){
+  const tr=document.createElement('tr');
+  tr.dataset.f='run';tr.tabIndex=0;
+  tr.innerHTML=
+    '<td class="tno">16</td>'+
+    '<td class="ttl">'+draftTitle+'<span class="meta">'+metaText+'</span></td>'+
+    '<td class="stage-cell"><div class="track"><span class="seg cur ours"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span></div><span class="stage-label run">'+stageLabel+'</span></td>'+
+    '<td class="r amt">'+amtHtml+'</td>'+
+    '<td class="r upd">방금</td>';
+  document.getElementById('rows').prepend(tr);
+}
+function confirmRequest(){
+  addTicketRow('내용 확정됨 — 확정 견적과 명세 변경안을 준비하고 있어요','견적 확정 중','<span class="range">40~55만</span>');
+  document.getElementById('new-asis').value='';
+  document.getElementById('new-tobe').value='';
+  closeNew();
+  toast('요청이 확정됐어요 — 확정 견적이 준비되면 알려드릴게요');
+}
+function leaveChat(){
+  addTicketRow('확인이 진행 중이에요 — 질문이 준비되면 알려드릴게요','코드 확인 중','<span class="tbd">산출 중</span>');
+  closeNew();
+  toast('진행 중인 확인은 계속돼요 — 준비되면 알림을 보낼게요');
+}
+function approve(btn){
+  btn.textContent='승인 완료 — 개발이 시작돼요';
+  btn.disabled=true;btn.style.opacity=.7;
+  document.getElementById('detail-pill').textContent='개발 대기';
+  document.getElementById('detail-pill').className='pill green';
+  toast('승인되었습니다. 진행 상황을 알려드릴게요');
+}
+</script>
+</body>
+</html>

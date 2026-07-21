@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ticketree-db
+    environment:
+      POSTGRES_USER: ticketree
+      POSTGRES_PASSWORD: ticketree
+      POSTGRES_DB: ticketree
+    ports:
+      - '5433:5432'
+    volumes:
+      - ticketree-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ticketree -d ticketree']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  ticketree-pgdata:

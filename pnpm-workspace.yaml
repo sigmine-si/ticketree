@@ -1,0 +1,7 @@
+packages:
+  - 'packages/*'
+
+# tsx가 esbuild 바이너리를 필요로 한다
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
