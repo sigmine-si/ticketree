@@ -24,7 +24,8 @@ packages/
 pnpm install
 pnpm db:up        # Postgres (docker, :5433)
 pnpm db:push      # 스키마 반영
-pnpm seed         # 예제 프로젝트 + 허브 워크스페이스 생성
+pnpm seed         # 예제 프로젝트(로컬 전용) 생성
+pnpm seed:demo    # 데모 프로젝트 '그린루프 몰' — 허브 repo를 GitHub에 올린다
 pnpm dev          # web + runner
 ```
 

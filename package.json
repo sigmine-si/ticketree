@@ -15,12 +15,16 @@
     "dev": "pnpm --parallel --filter @ticketree/web --filter @ticketree/runner dev",
     "dev:web": "pnpm --filter @ticketree/web dev",
     "dev:runner": "pnpm --filter @ticketree/runner dev",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "seed:demo": "pnpm --filter @ticketree/shared exec tsx src/seed-greenloop.ts"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
   }
 }
