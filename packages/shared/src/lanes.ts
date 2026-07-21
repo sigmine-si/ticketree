@@ -38,6 +38,11 @@ export interface LanePolicy {
   /** --permission-mode. 부모 환경에서 상속받지 않고 항상 명시한다. */
   readonly permissionMode: string
   readonly model: string
+  /**
+   * --effort. 계측 결과 대화 레인의 지연은 파일 탐색(~5초)이 아니라
+   * thinking 토큰이 지배한다. 여기가 속도 예산의 실제 손잡이다.
+   */
+  readonly effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max'
   readonly maxTurns: number
   /** 밀리초. 초과 시 러너가 프로세스를 죽인다. */
   readonly timeoutMs: number
@@ -53,6 +58,7 @@ export const LANE_POLICY: Record<Lane, LanePolicy> = {
     tools: ['Read', 'Grep', 'Glob'],
     permissionMode: 'default',
     model: 'claude-sonnet-5',
+    effort: 'medium',
     maxTurns: 30,
     timeoutMs: 5 * 60_000,
     writable: false,
@@ -61,6 +67,8 @@ export const LANE_POLICY: Record<Lane, LanePolicy> = {
     tools: undefined,
     permissionMode: 'acceptEdits',
     model: 'claude-opus-4-8',
+    // 구현은 정확도가 속도보다 중요하다 — 여기서는 아끼지 않는다
+    effort: 'high',
     maxTurns: 120,
     timeoutMs: 45 * 60_000,
     writable: true,

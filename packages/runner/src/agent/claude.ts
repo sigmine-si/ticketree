@@ -82,6 +82,8 @@ function buildArgs(o: RunOptions): string[] {
     // 부모에서 상속받지 않고 항상 명시한다
     '--permission-mode',
     policy.permissionMode,
+    '--effort',
+    policy.effort,
   ]
   if (policy.tools) args.push('--tools', ...policy.tools)
   if (o.resumeSessionId) args.push('--resume', o.resumeSessionId)
