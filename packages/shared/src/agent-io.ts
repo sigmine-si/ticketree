@@ -79,3 +79,38 @@ export function extractJsonBlock(text: string): unknown {
 export function parseIntakeResult(text: string): IntakeResult {
   return intakeResultSchema.parse(extractJsonBlock(text))
 }
+
+/**
+ * 견적 산출 job의 결과 — §8
+ *
+ * 러프 견적(접수 대화)과 달리 작업 분해와 근거가 붙는다.
+ * 관리자가 이걸 보고 청구 금액을 조정해 확정한다.
+ */
+export const estimationResultSchema = z.object({
+  wbs: z
+    .array(
+      z.object({
+        task: z.string(),
+        hours: z.number().nonnegative(),
+        repo: z.string().optional(),
+      }),
+    )
+    .min(1),
+  /** 구현 작업 시간 합계 */
+  total_hours: z.number().nonnegative(),
+  /** 사람이 검토·검수하는 시간 — 견적에 포함된다 */
+  review_hours: z.number().nonnegative(),
+  /** 구현 job이 쓸 것으로 예상하는 토큰 */
+  estimated_agent_tokens: z.number().int().nonnegative(),
+  /** AI 제안가 (원). 관리자가 조정할 수 있다. */
+  proposed_amount: z.number().int().nonnegative(),
+  estimated_days: z.string(),
+  /** 관리자용 산출 근거 */
+  rationale: z.string(),
+  risks: z.array(z.string()).default([]),
+})
+export type EstimationResult = z.infer<typeof estimationResultSchema>
+
+export function parseEstimationResult(text: string): EstimationResult {
+  return estimationResultSchema.parse(extractJsonBlock(text))
+}

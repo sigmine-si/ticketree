@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { and, eq } from 'drizzle-orm'
 import { clientNote, jobs, projects, stageOf, type RequestFlag, type RequestStatus } from '@ticketree/shared'
-import { db, getRequest, getThread } from '@/lib/data'
+import { db, getEstimate, getRequest, getThread } from '@/lib/data'
 import { getSession } from '@/lib/session'
 import { TopBar } from '@/components/TopBar'
 import { BigTrack } from '@/components/StageTrack'
@@ -46,6 +46,18 @@ export default async function RequestPage({
 
   const latestAgent = [...messages].reverse().find((m) => m.role === 'agent')
   const canConfirm = status === 'draft' && latestAgent?.payload?.outcome === 'ready'
+
+  // 확정 견적 승인 대기 — 클라이언트 게이트 (§7)
+  const estimate = status === 'quote_ready' ? await getEstimate(request.id) : null
+  const amount = estimate?.finalAmount ?? estimate?.proposedAmount ?? null
+  const quote =
+    estimate && amount !== null
+      ? {
+          amount,
+          days: estimate.estimatedDays,
+          scope: latestAgent?.payload?.summary?.scope ?? [],
+        }
+      : null
 
   return (
     <>
@@ -98,6 +110,7 @@ export default async function RequestPage({
           projectName={project?.name ?? ''}
           busy={busy}
           canConfirm={canConfirm}
+          quote={quote}
         />
       </main>
     </>

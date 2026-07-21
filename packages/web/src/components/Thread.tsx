@@ -36,6 +36,7 @@ export function Thread({
   projectName,
   busy,
   canConfirm,
+  quote,
 }: {
   requestId: string
   messages: ThreadMessage[]
@@ -43,6 +44,8 @@ export function Thread({
   projectName: string
   busy: boolean
   canConfirm: boolean
+  /** quote_ready일 때만 채워진다 — 확정 견적과 승인 버튼 (§7 이중 게이트의 첫 번째) */
+  quote: { amount: number; days: string | null; scope: string[] } | null
 }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
@@ -68,6 +71,13 @@ export function Thread({
   async function confirm() {
     setPending(true)
     await fetch(`/api/requests/${requestId}/confirm`, { method: 'POST' })
+    router.refresh()
+    setPending(false)
+  }
+
+  async function approveQuote() {
+    setPending(true)
+    await fetch(`/api/requests/${requestId}/approve-quote`, { method: 'POST' })
     router.refresh()
     setPending(false)
   }
@@ -107,6 +117,47 @@ export function Thread({
           <div className="est-actions" style={{ marginTop: 0 }}>
             <button className="btn btn-primary" onClick={confirm} disabled={pending}>
               이 내용으로 요청하기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {quote && (
+        <div className="card est">
+          <div className="est-head">
+            <span className="t">확정 견적</span>
+            <span className="note">승인하면 개발이 시작돼요</span>
+          </div>
+          <div className="figures">
+            <div className="fig">
+              <div className="k">확정 비용</div>
+              <div className="v">₩{quote.amount.toLocaleString('ko-KR')}</div>
+            </div>
+            <div className="fig">
+              <div className="k">예상 기간</div>
+              <div className="v">{quote.days ?? '—'}</div>
+            </div>
+            <div className="fig">
+              <div className="k">작업 범위</div>
+              <div className="v">기능 {quote.scope.length}건</div>
+            </div>
+          </div>
+          {quote.scope.length > 0 && (
+            <div className="scope">
+              <p className="sk">포함되는 작업</p>
+              {quote.scope.map((s, i) => (
+                <div className="scope-item" key={i}>
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  {s}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="est-actions">
+            <button className="btn btn-primary" onClick={approveQuote} disabled={pending}>
+              견적 승인하고 진행
             </button>
           </div>
         </div>

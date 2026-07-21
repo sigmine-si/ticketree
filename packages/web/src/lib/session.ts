@@ -83,3 +83,22 @@ export async function requireClient(): Promise<Session & { projectId: string }> 
   if (!s || s.kind !== 'client' || !s.projectId) throw new Unauthorized()
   return s as Session & { projectId: string }
 }
+
+/**
+ * 관리자 세션. 관리자는 프로젝트 스코프가 없다 — 전 프로젝트를 본다.
+ * 클라이언트 세션으로는 절대 통과할 수 없다.
+ */
+export async function requireAdmin(): Promise<Session> {
+  const s = await getSession()
+  if (!s || s.kind !== 'admin') throw new Unauthorized()
+  return s
+}
+
+/** ADMIN_GITHUB_LOGINS 허용 목록 (§16-1). 비어 있으면 아무도 못 들어온다. */
+export function isAllowedAdmin(login: string): boolean {
+  const allowed = (process.env.ADMIN_GITHUB_LOGINS ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+  return allowed.includes(login.toLowerCase())
+}

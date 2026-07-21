@@ -6,7 +6,7 @@
  *
  * 두 job은 같은 코드를 지난다. 차이는 resume 여부와 프롬프트뿐이다.
  */
-import { and, asc, desc, eq, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, isNull } from 'drizzle-orm'
 import {
   agentSessions,
   changeRequests,
@@ -62,7 +62,7 @@ export async function runIntakeJob(db: Db, job: ClaimedJob): Promise<JobOutcome>
         urgency: request.urgency,
         attachmentNote: null,
       })
-    : answerRoundPrompt({ answers: await collectAnswers(db, request.id) })
+    : await buildResumePrompt(db, request.id)
 
   // exploring은 "job 실행 중"이라는 뜻의 일시 상태다. 에스컬레이션으로 멈추면
   // 여기로 돌려놓아야 한다 — 안 그러면 요청이 영원히 실행 중으로 보인다.
@@ -214,28 +214,53 @@ async function applyOutcome(
   await transition(db, requestId, 'draft', AGENT, { ready: true })
 }
 
-/** 직전 라운드의 질문과 답변을 모은다. */
-async function collectAnswers(
-  db: Db,
-  requestId: string,
-): Promise<Array<{ prompt: string; answer: string }>> {
+/**
+ * 재개 프롬프트를 만든다.
+ *
+ * 라운드를 다시 깨우는 계기는 둘이다 — 클라이언트가 질문에 답했거나(§16-2),
+ * 관리자가 에스컬레이션을 해석해줬거나(§5). 둘 다 여기로 들어온다.
+ */
+async function buildResumePrompt(db: Db, requestId: string): Promise<string> {
   const [latest] = await db
-    .select({ id: messages.id })
+    .select({ id: messages.id, round: messages.round })
     .from(messages)
     .where(and(eq(messages.requestId, requestId), eq(messages.role, 'agent')))
     .orderBy(desc(messages.round))
     .limit(1)
-  if (!latest) return []
 
-  const rows = await db
-    .select()
-    .from(messageQuestions)
-    .where(eq(messageQuestions.messageId, latest.id))
-    .orderBy(asc(messageQuestions.idx))
+  const answers = latest
+    ? (
+        await db
+          .select()
+          .from(messageQuestions)
+          .where(eq(messageQuestions.messageId, latest.id))
+          .orderBy(asc(messageQuestions.idx))
+      )
+        .filter((q) => q.answeredAt !== null)
+        .map((q) => ({ prompt: q.prompt, answer: q.answerText ?? '' }))
+    : []
 
-  return rows
-    .filter((q) => q.answeredAt !== null)
-    .map((q) => ({ prompt: q.prompt, answer: q.answerText ?? '' }))
+  // 마지막 에이전트 응답 이후에 들어온 운영자 해석
+  const operatorNotes = latest
+    ? (
+        await db
+          .select({ content: messages.content })
+          .from(messages)
+          .where(
+            and(
+              eq(messages.requestId, requestId),
+              eq(messages.role, 'system'),
+              gt(messages.round, latest.round),
+            ),
+          )
+          .orderBy(asc(messages.round))
+      ).map((m) => m.content)
+    : []
+
+  return answerRoundPrompt({
+    answers,
+    operatorNotes,
+  })
 }
 
 /** 아직 답이 안 온 질문이 있는지 — 라운드 종료 판정에 쓴다 (§16-2). */

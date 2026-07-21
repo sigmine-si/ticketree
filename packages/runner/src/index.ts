@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto'
 import { closeDb, createDb, createPool, transition } from '@ticketree/shared'
 import { claimJob, finishJob, requeueJob, type ClaimedJob } from './queue.js'
 import { runIntakeJob } from './jobs/intake.js'
+import { runEstimationJob } from './jobs/estimation.js'
 
 const RUNNER_ID = `runner-${process.pid}-${randomUUID().slice(0, 8)}`
 const POLL_INTERVAL_MS = Number(process.env.RUNNER_POLL_MS ?? 2000)
@@ -30,6 +31,8 @@ async function dispatch(job: ClaimedJob): Promise<void> {
     case 'exploration':
     case 'intake_round':
       return void (await finishJob(db, job.id, await runIntakeJob(db, job)))
+    case 'estimation':
+      return void (await finishJob(db, job.id, await runEstimationJob(db, job)))
     default:
       throw new Error(`job kind '${job.kind}' is not implemented yet`)
   }

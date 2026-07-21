@@ -181,8 +181,10 @@ tbody tr:hover { background: #fafaf7; }
 .sysline .t { margin-left: auto; font-size: 12px; color: var(--faint); }
 
 .qcard { border-color: var(--line-strong); }
-.qcard .qhead { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
-.qcard .qhead .who { font-size: 13px; font-weight: 600; }
+/* 질문이 없는 에이전트 카드도 같은 헤더를 쓴다 — .qcard 하위로 한정하지 않는다 */
+.qhead { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
+.qhead .who { font-size: 13px; font-weight: 600; }
+.qhead .when { margin-left: auto; font-size: 12px; color: var(--faint); }
 .qbadge { font-family: var(--mono); font-size: 11.5px; background: var(--page); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: var(--sub); margin-left: auto; }
 .q { border-top: 1px solid var(--line); padding: 15px 0 13px; }
 .q:first-of-type { border-top: none; padding-top: 8px; }
@@ -260,3 +262,95 @@ tbody tr:hover { background: #fafaf7; }
   .figures { grid-template-columns: 1fr; }
   .big-track .bl { display: none; }
 }
+
+/* ═════════════════════════ 관리자 — admin-dashboard-mockup.html에서 이식 */
+
+.topbar.admin { background: var(--ink); border-bottom: none; }
+.topbar.admin .topbar-in { max-width: 1120px; height: 54px; }
+.topbar.admin .wordmark { color: #fff; }
+.topbar.admin .wordmark .dot { color: #6fbf9a; }
+.admin-tag { font-family: var(--mono); font-size: 10.5px; color: #9db5a8; border: 1px solid #3a423c; border-radius: 5px; padding: 2px 8px; letter-spacing: 0.04em; }
+.topbar.admin .nav-link { color: #a9b1ab; }
+.topbar.admin .nav-link:hover { color: #fff; background: none; }
+.topbar.admin .nav-link.on { color: #fff; font-weight: 600; background: #2c332e; }
+.topbar.admin .avatar { background: #2c332e; color: #b8c4bc; }
+.runner-chip { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11.5px; color: #9db5a8; border: 1px solid #3a423c; border-radius: 999px; padding: 4px 12px; }
+.runner-chip .pulse { width: 7px; height: 7px; border-radius: 50%; background: #6fbf9a; animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .runner-chip .pulse { animation: none; } }
+
+.wrap.admin { max-width: 1120px; }
+.ledger.four { grid-template-columns: repeat(4, 1fr); }
+.ledger.four .v { font-size: 18px; }
+
+.chip-act { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 5px 12px; white-space: nowrap; border: none; display: inline-block; }
+.chip-act.amber { background: var(--amber-tint); color: var(--amber); }
+.chip-act.green { background: var(--green-tint); color: var(--green-deep); }
+.chip-act.gray { background: var(--page); color: var(--sub); font-weight: 500; }
+.chip-act.red { background: var(--red-tint); color: var(--red); }
+
+.proj-cell { width: 150px; }
+.proj-cell .p { font-size: 13px; font-weight: 500; }
+.proj-cell .c { font-size: 12px; color: var(--faint); }
+.act-cell { width: 132px; }
+.ttl .meta .warn { color: var(--red); }
+.amt .cost { display: block; font-size: 11px; color: var(--faint); }
+
+.btn-danger { color: var(--red); border-color: #e4c7c3; }
+.btn-danger:hover { background: var(--red-tint); }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 316px; gap: 16px; align-items: start; }
+.dmain { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.dside { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 14px; }
+.card .ch { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.card .cs { font-size: 12.5px; color: var(--faint); margin-bottom: 12px; }
+
+.note { font-size: 13.5px; line-height: 1.7; white-space: pre-wrap; }
+.files { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+.ftag { font-family: var(--mono); font-size: 11.5px; background: var(--page); border: 1px solid var(--line); border-radius: 5px; padding: 2px 8px; color: var(--sub); }
+
+.qa { border-top: 1px solid var(--line); padding: 10px 0; font-size: 13.5px; }
+.qa:first-of-type { border-top: none; padding-top: 2px; }
+.qa .q { color: var(--sub); margin-bottom: 2px; }
+.qa .a { font-weight: 500; }
+.qa .a::before { content: '→ '; color: var(--green); }
+
+.est-figs { display: flex; flex-direction: column; }
+.efrow { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; color: var(--sub); gap: 12px; }
+.efrow:first-of-type { border-top: none; }
+.efrow .ev { font-family: var(--mono); font-size: 13.5px; color: var(--ink); text-align: right; }
+.efrow .ev.dim { color: var(--faint); }
+.efrow.total { border-top: 1px solid var(--line-strong); margin-top: 2px; padding-top: 11px; }
+.efrow.total .ev { font-size: 16px; font-weight: 500; }
+.margin-note { font-size: 11.5px; color: var(--faint); margin-top: 6px; line-height: 1.5; }
+.price-edit { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.price-edit input { flex: 1; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 12px; font-size: 14px; font-family: var(--mono); text-align: right; color: var(--ink); }
+.side-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.side-actions .btn { width: 100%; padding: 11px; justify-content: center; }
+.approve-note { font-size: 12px; color: var(--faint); text-align: center; line-height: 1.5; margin-top: 2px; }
+
+.jobline { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--sub); padding: 7px 0; border-top: 1px solid var(--line); }
+.jobline:first-of-type { border-top: none; }
+.jobline .jid { font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+.jobline .jv { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--sub); }
+.jobline .ok { color: var(--green); }
+
+.wbs-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; padding: 8px 0; border-top: 1px solid var(--line); }
+.wbs-row:first-of-type { border-top: none; }
+.wbs-row .h { font-family: var(--mono); font-size: 12.5px; color: var(--faint); white-space: nowrap; }
+.risk { display: flex; gap: 9px; font-size: 13.5px; padding: 7px 0; color: var(--sub); line-height: 1.6; }
+.risk::before { content: '⚠'; color: var(--amber); flex: none; }
+
+.answer-box { display: flex; flex-direction: column; gap: 9px; }
+.answer-box textarea { border: 1px solid var(--line-strong); border-radius: 10px; padding: 11px 13px; font-size: 14px; font-family: var(--sans); line-height: 1.6; min-height: 92px; resize: vertical; color: var(--ink); }
+
+@media (max-width: 860px) {
+  .detail-grid { grid-template-columns: 1fr; }
+  .dside { position: static; }
+  .ledger.four { grid-template-columns: 1fr 1fr; }
+  .ledger.four > div { border-top: 1px solid var(--line); }
+  .proj-cell { width: auto; }
+}
+
+/* 관리자 테이블은 REQ-000 형식이라 더 넓다 */
+.wrap.admin .tno { width: 72px; padding-left: 20px; white-space: nowrap; font-size: 12px; }

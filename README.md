@@ -31,6 +31,16 @@ pnpm dev          # web + runner
 `.env.example`을 `.env`로 복사한다. 로컬에서는 `claude` CLI 로그인 상태를 그대로 쓰므로
 에이전트 토큰을 따로 넣지 않아도 된다.
 
+포털은 `/dev-login`, 관리자는 `/admin/login`으로 들어간다. 둘 다 로컬 전용 우회이며
+실제 인증(초대링크+PIN / GitHub OAuth)은 세션 레이어 위에 이미 붙어 있다.
+
+### 관리자 GitHub OAuth 설정 (선택)
+
+GitHub → Settings → Developer settings → OAuth Apps에서 앱을 만들고
+Authorization callback URL을 `http://localhost:3000/api/auth/github/callback`으로 둔 뒤,
+`.env`에 `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` / `ADMIN_GITHUB_LOGINS`를 채운다.
+허용 목록에 없는 계정은 users 행조차 만들어지지 않는다.
+
 ## 접수 대화 직접 돌려보기
 
 러너를 띄우지 않고 job 하나만 실행한다.
@@ -46,7 +56,7 @@ pnpm --filter @ticketree/runner exec tsx src/dev/try-answer.ts <REQ_NO> "답변1
 
 - [x] 슬라이스 1 — 접수 대화 (백엔드: 큐·락·에이전트·상태 전이)
 - [x] 슬라이스 1 — 접수 대화 (포털 UI)
-- [ ] 슬라이스 2 — 관리자 결정 큐
+- [x] 슬라이스 2 — 관리자 결정 큐 (GitHub OAuth, 견적 산출, 이중 게이트)
 - [ ] 슬라이스 3 — Spec·허브 repo
 - [ ] 슬라이스 4 — 구현·배포 (여기부터 도그푸딩)
 - [ ] 슬라이스 5 — 운영

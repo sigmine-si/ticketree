@@ -99,16 +99,34 @@ export function firstRoundPrompt(i: FirstRoundInput): string {
 
 export interface AnswerRoundInput {
   answers: Array<{ prompt: string; answer: string }>
+  /** 에스컬레이션에 대한 운영자의 해석 (§5) */
+  operatorNotes?: string[]
   freeText?: string
 }
 
 export function answerRoundPrompt(i: AnswerRoundInput): string {
-  const parts = ['클라이언트가 답변했다.', '']
-  for (const a of i.answers) parts.push(`- **${a.prompt}**\n  → ${a.answer}`)
+  const parts: string[] = []
+
+  if (i.answers.length > 0) {
+    parts.push('클라이언트가 답변했다.', '')
+    for (const a of i.answers) parts.push(`- **${a.prompt}**\n  → ${a.answer}`)
+  }
+
+  if (i.operatorNotes?.length) {
+    if (parts.length) parts.push('')
+    parts.push(
+      '운영자가 앞서 네가 멈춰 세운 문제를 해석해줬다. 이건 클라이언트의 말이 아니라',
+      '우리 팀의 결정이므로 그대로 따르고, 클라이언트에게 되묻지 않는다.',
+      '',
+      ...i.operatorNotes.map((n) => `- ${n}`),
+    )
+  }
+
   if (i.freeText) parts.push('', `추가로 남긴 말: ${i.freeText}`)
+
   parts.push(
     '',
-    '답변을 반영해 확정 가능한지 판단하라. 답변 때문에 코드를 다시 봐야 하면 다시 확인하라.',
+    '반영해서 확정 가능한지 판단하라. 답변 때문에 코드를 다시 봐야 하면 다시 확인하라.',
     '확정 가능하면 outcome을 ready로 하고 요약과 러프 견적을 내라.',
   )
   return parts.join('\n')

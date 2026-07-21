@@ -6,7 +6,7 @@
  */
 import { NextResponse } from 'next/server'
 import { desc, eq } from 'drizzle-orm'
-import { agentSessions, changeRequests, messages, transition } from '@ticketree/shared'
+import { agentSessions, changeRequests, enqueueJob, messages, transition } from '@ticketree/shared'
 import { db, getRequestById } from '@/lib/data'
 import { requireClient, Unauthorized } from '@/lib/session'
 
@@ -54,6 +54,13 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     .update(agentSessions)
     .set({ closedAt: new Date() })
     .where(eq(agentSessions.requestId, request.id))
+
+  // 확정 견적 산출 시작 (§2)
+  await enqueueJob(db, {
+    projectId: session.projectId,
+    requestId: request.id,
+    kind: 'estimation',
+  })
 
   return NextResponse.json({ ok: true, reqNo: request.reqNo })
 }

@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server'
 import { and, eq, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import { enqueueJob, logEvent, messageQuestions, messages } from '@ticketree/shared'
+// messages는 질문 소속 검증(innerJoin)에만 쓴다
 import { db, getRequestById } from '@/lib/data'
 import { requireClient, Unauthorized } from '@/lib/session'
 
@@ -67,24 +68,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ remaining: remaining.length, queued: false })
   }
 
-  // 라운드 완결 — 이제 에이전트를 깨운다
-  const answered = await db
-    .select({ prompt: messageQuestions.prompt, answerText: messageQuestions.answerText })
-    .from(messageQuestions)
-    .where(eq(messageQuestions.messageId, question.messageId))
-
-  const [lastMsg] = await db
-    .select({ round: messages.round })
-    .from(messages)
-    .where(eq(messages.id, question.messageId))
-
-  await db.insert(messages).values({
-    requestId: request.id,
-    round: (lastMsg?.round ?? 0) + 1,
-    role: 'client',
-    content: answered.map((a) => `${a.prompt}\n→ ${a.answerText}`).join('\n\n'),
-  })
-
+  // 라운드 완결 — 이제 에이전트를 깨운다.
+  //
+  // 답변을 별도 메시지로 복사하지 않는다. 답은 이미 message_questions에 있고,
+  // 스레드는 질문 카드 안에 인라인으로 보여준다. 복사본을 만들면 클라이언트 화면에
+  // 같은 내용이 두 번 나오고, 에이전트도 그 복사본을 읽지 않는다(buildResumePrompt 참조).
   await enqueueJob(db, {
     projectId: session.projectId,
     requestId: request.id,
