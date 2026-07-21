@@ -11,6 +11,7 @@ import {
   jobs,
   messages,
   projects,
+  pullRequests,
   type EstimationResult,
   type IntakeResult,
   type RequestFlag,
@@ -204,6 +205,14 @@ export interface ReviewDetail {
   }>
   /** 유사 규모 과거 건 평균 — 견적 조정의 근거 (§8) */
   similar: { n: number; avgCostUsd: number; avgHours: number | null }
+  /** 허브 repo의 Spec PR (§6). 승인 근거 3종 중 첫 번째. */
+  specPr: {
+    number: number
+    status: string
+    branch: string | null
+    diff: string | null
+    url: string
+  } | null
 }
 
 export async function getReviewDetail(requestId: string): Promise<ReviewDetail | null> {
@@ -247,6 +256,13 @@ export async function getReviewDetail(requestId: string): Promise<ReviewDetail |
     .where(eq(jobs.requestId, requestId))
     .orderBy(jobs.queuedAt)
 
+  const [specPr] = await db
+    .select()
+    .from(pullRequests)
+    .where(and(eq(pullRequests.requestId, requestId), eq(pullRequests.kind, 'spec')))
+    .orderBy(desc(pullRequests.createdAt))
+    .limit(1)
+
   const [similar] = await db
     .select({
       n: sql<number>`count(distinct ${jobs.requestId})::int`,
@@ -275,6 +291,15 @@ export async function getReviewDetail(requestId: string): Promise<ReviewDetail |
       avgCostUsd: similar?.avgCost ?? 0,
       avgHours: null,
     },
+    specPr: specPr
+      ? {
+          number: specPr.prNumber,
+          status: specPr.status,
+          branch: specPr.branch,
+          diff: specPr.diff,
+          url: `https://github.com/${project!.hubRepo}/pull/${specPr.prNumber}`,
+        }
+      : null,
   }
 }
 

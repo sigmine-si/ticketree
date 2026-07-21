@@ -7,9 +7,16 @@
  * 비가역적 동작(머지·배포)은 반드시 이 승인 뒤에 러너가 실행한다 (§1).
  */
 import { NextResponse } from 'next/server'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { changeRequests, estimates, logEvent, transition } from '@ticketree/shared'
+import {
+  changeRequests,
+  enqueueJob,
+  estimates,
+  logEvent,
+  pullRequests,
+  transition,
+} from '@ticketree/shared'
 import { db } from '@/lib/data'
 import { requireAdmin, Unauthorized } from '@/lib/session'
 
@@ -65,10 +72,32 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const actor = { kind: 'admin' as const, id: admin.userId }
 
   if (action === 'approve_spec') {
-    // 슬라이스 3에서 여기에 Spec PR 머지가 붙고, 슬라이스 4에서 구현 job 등록이 붙는다.
-    // 지금은 상태만 옮긴다 — 없는 job을 큐에 넣으면 러너가 실패한다.
-    await transition(db, request.id, 'queued_dev', actor, { finalAmount, comment })
-    return NextResponse.json({ ok: true, status: 'queued_dev' })
+    // 머지는 웹이 하지 않는다. 비가역적 동작은 러너의 몫이므로 job으로 넘긴다 (§1).
+    // 이 job이 큐에 있다는 것 자체가 관리자가 승인했다는 뜻이다.
+    const [pr] = await db
+      .select({ id: pullRequests.id })
+      .from(pullRequests)
+      .where(
+        and(
+          eq(pullRequests.requestId, request.id),
+          eq(pullRequests.kind, 'spec'),
+          eq(pullRequests.status, 'open'),
+        ),
+      )
+    if (!pr) {
+      return NextResponse.json(
+        { error: '머지할 Spec PR이 아직 없어요 — 명세 변경안 생성이 끝나지 않았습니다' },
+        { status: 409 },
+      )
+    }
+
+    await enqueueJob(db, {
+      projectId: request.projectId,
+      requestId: request.id,
+      kind: 'spec_merge',
+    })
+    await logEvent(db, request.id, actor, { specApproved: true, finalAmount, comment })
+    return NextResponse.json({ ok: true, status: 'merging' })
   }
 
   if (action === 'request_changes') {

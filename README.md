@@ -58,6 +58,6 @@ pnpm --filter @ticketree/runner exec tsx src/dev/try-answer.ts <REQ_NO> "답변1
 - [x] 슬라이스 1 — 접수 대화 (백엔드: 큐·락·에이전트·상태 전이)
 - [x] 슬라이스 1 — 접수 대화 (포털 UI)
 - [x] 슬라이스 2 — 관리자 결정 큐 (GitHub OAuth, 견적 산출, 이중 게이트)
-- [ ] 슬라이스 3 — Spec·허브 repo
+- [x] 슬라이스 3 — Spec·허브 repo (명세 PR·머지·명세 화면)
 - [ ] 슬라이스 4 — 구현·배포 (여기부터 도그푸딩)
 - [ ] 슬라이스 5 — 운영

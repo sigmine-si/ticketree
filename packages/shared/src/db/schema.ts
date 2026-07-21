@@ -286,6 +286,9 @@ export const pullRequests = pgTable('pull_requests', {
   prNumber: integer('pr_number').notNull(),
   status: text('status').notNull().default('open'),
   headSha: text('head_sha'),
+  branch: text('branch'),
+  /** PR 생성 시점에 잡아둔 diff. 검토 화면이 GitHub을 다시 부르지 않게 한다. */
+  diff: text('diff'),
   /** manual 어댑터면 운영자가 직접 입력 (§16-6) */
   previewUrl: text('preview_url'),
   mergedAt: timestamp('merged_at', { withTimezone: true }),

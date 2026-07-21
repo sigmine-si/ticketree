@@ -21,10 +21,9 @@ export function TopBar({
             <Link className={`nav-link${active === 'requests' ? ' on' : ''}`} href="/requests">
               요청
             </Link>
-            {/* 명세 화면은 슬라이스 3 */}
-            <span className="nav-link" style={{ opacity: 0.4, cursor: 'default' }}>
+            <Link className={`nav-link${active === 'spec' ? ' on' : ''}`} href="/spec">
               명세
-            </span>
+            </Link>
           </nav>
         </div>
         <div className="top-right">

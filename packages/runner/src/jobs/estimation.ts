@@ -7,6 +7,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm'
 import {
   changeRequests,
+  enqueueJob,
   estimates,
   jobs,
   messages,
@@ -150,6 +151,14 @@ export async function runEstimationJob(db: Db, job: ClaimedJob): Promise<JobOutc
       wbs: result as never,
     })
   }
+
+  // 명세 변경안은 클라이언트의 견적 승인과 병렬로 만든다.
+  // 관리자가 검토할 때는 이미 PR이 있어야 하므로 여기서 미리 건다 (§2).
+  await enqueueJob(db, {
+    projectId: job.projectId,
+    requestId: request.id,
+    kind: 'spec_draft',
+  })
 
   await transition(db, request.id, 'quote_ready', AGENT, {
     proposedAmount: result.proposed_amount,

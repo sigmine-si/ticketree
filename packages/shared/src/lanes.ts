@@ -5,13 +5,15 @@
  * 프롬프트는 이것을 바꿀 수 없다. 러너는 여기서 나온 플래그만 사용한다.
  */
 
-export const LANES = ['chat', 'work'] as const
+export const LANES = ['chat', 'spec', 'work'] as const
 export type Lane = (typeof LANES)[number]
 
 export const JOB_KINDS = [
   'exploration',
   'intake_round',
   'estimation',
+  'spec_draft',
+  'spec_merge',
   'implementation',
   'onboarding',
   'deploy',
@@ -26,11 +28,17 @@ export const LANE_OF_JOB: Record<JobKind, Lane> = {
   exploration: 'chat',
   intake_round: 'chat',
   estimation: 'chat',
+  // 명세 작성은 쓰기다 — 대화 레인(read-only)에 둘 수 없다.
+  spec_draft: 'spec',
   implementation: 'work',
   onboarding: 'work',
-  // deploy는 에이전트를 쓰지 않는다 — 러너가 직접 머지·배포한다.
+  // 아래 둘은 에이전트를 쓰지 않는다 — 러너가 직접 머지·배포한다 (§1).
+  spec_merge: 'work',
   deploy: 'work',
 }
+
+/** 에이전트를 띄우지 않고 러너가 직접 처리하는 job. 비가역적 동작이 여기 모인다. */
+export const RUNNER_ONLY_JOBS: readonly JobKind[] = ['spec_merge', 'deploy']
 
 export interface LanePolicy {
   /** --tools 화이트리스트. undefined면 전체 도구 허용(work 레인). */
@@ -62,6 +70,23 @@ export const LANE_POLICY: Record<Lane, LanePolicy> = {
     maxTurns: 30,
     timeoutMs: 5 * 60_000,
     writable: false,
+  },
+  /**
+   * 명세 작성 레인. 파일을 고치되 git은 만지지 않는다.
+   *
+   * Bash를 일부러 뺐다. 브랜치·커밋·push·PR 생성은 러너가 한다 —
+   * 이 레인의 컨텍스트에는 클라이언트가 쓴 문장이 들어오므로(§10 입력 불신),
+   * 임의 명령 실행을 열어줄 이유가 없다. 게다가 브랜치명·커밋 메시지는
+   * 결정적이어야 추적이 된다.
+   */
+  spec: {
+    tools: ['Read', 'Grep', 'Glob', 'Edit', 'Write'],
+    permissionMode: 'acceptEdits',
+    model: 'claude-sonnet-5',
+    effort: 'medium',
+    maxTurns: 40,
+    timeoutMs: 10 * 60_000,
+    writable: true,
   },
   work: {
     tools: undefined,

@@ -20,6 +20,7 @@ export function ReviewActions({
   spentUsd,
   similar,
   queueDepth,
+  prNumber,
 }: {
   requestId: string
   proposedAmount: number | null
@@ -30,6 +31,8 @@ export function ReviewActions({
   spentUsd: number
   similar: { n: number; avgCostUsd: number }
   queueDepth: number
+  /** 승인 시 머지될 Spec PR. 없으면 승인할 수 없다. */
+  prNumber: number | null
 }) {
   const router = useRouter()
   const [amount, setAmount] = useState(String(finalAmount ?? proposedAmount ?? ''))
@@ -118,7 +121,7 @@ export function ReviewActions({
       <div className="side-actions">
         <button
           className="btn btn-primary"
-          disabled={busy}
+          disabled={busy || prNumber === null}
           onClick={() => void decide('approve_spec')}
         >
           Spec 승인 · 개발 시작
@@ -129,14 +132,19 @@ export function ReviewActions({
         <button className="btn btn-danger" disabled={busy} onClick={() => void decide('reject')}>
           반려
         </button>
+        {/* 버튼이 일으키는 비가역적 동작을 명시한다 (§5) */}
         <p className="approve-note">
-          승인하면 청구 금액이 확정되고
-          <br />
-          구현 대기로 넘어갑니다 (현재 큐 {queueDepth}건)
-          <br />
-          <span style={{ color: 'var(--amber)' }}>
-            Spec PR 머지와 구현 job 등록은 슬라이스 3·4에서 붙습니다
-          </span>
+          {prNumber === null ? (
+            '명세 변경안이 준비되면 승인할 수 있어요'
+          ) : (
+            <>
+              승인하면 <strong>PR #{prNumber}가 머지되고</strong>
+              <br />
+              청구 금액이 확정됩니다 (현재 큐 {queueDepth}건)
+              <br />
+              <span style={{ color: 'var(--amber)' }}>구현 job 등록은 슬라이스 4에서 붙습니다</span>
+            </>
+          )}
         </p>
       </div>
     </>

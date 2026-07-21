@@ -8,6 +8,7 @@ import { decisionOf, DECISION_LABEL } from '@/lib/decision'
 import { AdminTopBar } from '@/components/AdminTopBar'
 import { ReviewActions } from '@/components/ReviewActions'
 import { EscalationAnswer } from '@/components/EscalationAnswer'
+import { SpecDiff } from '@/components/SpecDiff'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   const [detail, l] = await Promise.all([getReviewDetail(id), ledger()])
   if (!detail) notFound()
 
-  const { request, project, intake, estimation, estimate, qa, jobs, similar } = detail
+  const { request, project, intake, estimation, estimate, qa, jobs, similar, specPr } = detail
   const status = request.status as RequestStatus
   const flag = request.flag as RequestFlag | null
   const decision = decisionOf(status, flag, false)
@@ -135,15 +136,23 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               </div>
             )}
 
-            {/* Spec diff는 허브 repo가 붙는 슬라이스 3에서 여기 들어온다 */}
-            <div className="card" style={{ borderStyle: 'dashed' }}>
-              <p className="ch" style={{ color: 'var(--faint)' }}>
-                Spec 변경안
-              </p>
-              <p className="cs" style={{ marginBottom: 0 }}>
-                허브 repo와 Spec PR이 붙는 슬라이스 3에서 이 자리에 diff가 들어옵니다
-              </p>
-            </div>
+            {specPr?.diff ? (
+              <SpecDiff
+                diff={specPr.diff}
+                prNumber={specPr.number}
+                url={specPr.url}
+                status={specPr.status}
+              />
+            ) : (
+              <div className="card" style={{ borderStyle: 'dashed' }}>
+                <p className="ch" style={{ color: 'var(--faint)' }}>
+                  Spec 변경안
+                </p>
+                <p className="cs" style={{ marginBottom: 0 }}>
+                  명세 변경안을 만들고 있어요 — 잠시 후 이 자리에 변경 내용이 나옵니다
+                </p>
+              </div>
+            )}
           </div>
 
           <aside className="dside">
@@ -158,6 +167,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                 spentUsd={spentUsd}
                 similar={similar}
                 queueDepth={l.queued}
+                prNumber={specPr?.number ?? null}
               />
             ) : (
               <div className="card">

@@ -114,3 +114,27 @@ export type EstimationResult = z.infer<typeof estimationResultSchema>
 export function parseEstimationResult(text: string): EstimationResult {
   return estimationResultSchema.parse(extractJsonBlock(text))
 }
+
+/**
+ * 명세 변경안 job의 결과 — §2, §6
+ *
+ * 에이전트는 허브 repo에 브랜치를 만들고 명세를 고친 뒤 PR까지 연다.
+ * 머지는 하지 않는다 — 그건 관리자 승인 뒤 러너의 일이다 (§1).
+ */
+export const specDraftResultSchema = z.object({
+  // pr_number·branch는 여기 없다 — 러너가 아는 값이라 에이전트에게 묻지 않는다.
+  /** 변경한 기능 명세 (파일명 기준: coupon, order …) */
+  features: z.array(z.string()).default([]),
+  /** 관리자가 읽을 한 줄 요약 */
+  summary: z.string(),
+  /**
+   * 명세를 고치다 발견한 코드-명세 불일치.
+   * 이번 요청 범위 밖이라도 여기 적어 사람에게 넘긴다.
+   */
+  discrepancies: z.array(z.string()).default([]),
+})
+export type SpecDraftResult = z.infer<typeof specDraftResultSchema>
+
+export function parseSpecDraftResult(text: string): SpecDraftResult {
+  return specDraftResultSchema.parse(extractJsonBlock(text))
+}
