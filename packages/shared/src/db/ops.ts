@@ -5,10 +5,10 @@
  * request_events에 흔적을 남긴다. 직접 UPDATE 하지 않는다.
  */
 import { eq, sql } from 'drizzle-orm'
-import type { Db } from './client.js'
-import { changeRequests, jobs, projects, requestEvents } from './schema.js'
-import { isClientTurn, type RequestStatus } from '../status.js'
-import { LANE_OF_JOB, type JobKind } from '../lanes.js'
+import type { Db } from './client'
+import { changeRequests, jobs, projects, requestEvents } from './schema'
+import { isClientTurn, type RequestStatus } from '../status'
+import { LANE_OF_JOB, type JobKind } from '../lanes'
 
 export type ActorKind = 'client' | 'admin' | 'agent' | 'system'
 

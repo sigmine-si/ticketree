@@ -11,3 +11,7 @@ dist/
 workspaces/
 
 .DS_Store
+
+# playwright mcp 산출물
+.playwright-mcp/
+*.png

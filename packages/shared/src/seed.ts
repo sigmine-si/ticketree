@@ -6,8 +6,8 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { createDb, closeDb } from './db/client.js'
-import { projects, repos, users } from './db/schema.js'
+import { createDb, closeDb } from './db/client'
+import { projects, repos, users } from './db/schema'
 import { eq } from 'drizzle-orm'
 
 const ROOT = resolve(process.cwd(), '../..')
@@ -103,8 +103,8 @@ const DIGEST_WEB = `
 
 const CODE: Record<string, string> = {
   'repos/web/src/orders/checkout.ts': `
-import { PriceCalculator } from '../billing/PriceCalculator.js'
-import type { Cart, Order } from './types.js'
+import { PriceCalculator } from '../billing/PriceCalculator'
+import type { Cart, Order } from './types'
 
 /**
  * 장바구니를 주문으로 바꾸고 결제를 요청한다.
@@ -124,7 +124,7 @@ export async function createOrder(cart: Cart, memberId: string): Promise<Order> 
 }
 `,
   'repos/web/src/orders/status.ts': `
-import type { Order } from './types.js'
+import type { Order } from './types'
 
 export type OrderStatus = 'accepted' | 'preparing' | 'ready'
 
@@ -143,7 +143,7 @@ export async function advance(order: Order): Promise<OrderStatus> {
 }
 `,
   'repos/web/src/billing/PriceCalculator.ts': `
-import type { Cart } from '../orders/types.js'
+import type { Cart } from '../orders/types'
 
 export interface PriceResult {
   subtotal: number
@@ -168,7 +168,7 @@ export class PriceCalculator {
 }
 `,
   'repos/web/src/billing/webhook.ts': `
-import { grantStamp } from '../loyalty/stamps.js'
+import { grantStamp } from '../loyalty/stamps'
 
 /**
  * PG사 결제 완료 웹훅. 결제 확정의 단일 지점이다.
