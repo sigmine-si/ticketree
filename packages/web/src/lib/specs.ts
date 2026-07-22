@@ -53,7 +53,14 @@ function isInternalHeading(h: string): boolean {
   return h.includes('내부') || h.includes('구현 규칙') || h.includes('설계')
 }
 
+/**
+ * 명세는 세 층이다 (specs/product.md 참조).
+ * product = 무엇을·누구를 위해, overview = 어느 기능도 혼자 소유하지 않는 것, feature = 각 기능.
+ */
+export type SpecLayer = 'product' | 'overview' | 'feature'
+
 export interface FeatureSpec {
+  layer: SpecLayer
   /** 파일명에서 온 식별자 (settlement) */
   slug: string
   /** 문서 제목 (판매자 정산) */
@@ -110,7 +117,7 @@ function parseHistory(line: string): HistoryEntry | null {
   return { version: m[1]!, reqTag: m[2] ?? null, date: m[3] ?? null, text: m[4]!.trim() }
 }
 
-export function parseSpec(slug: string, md: string): FeatureSpec {
+export function parseSpec(slug: string, md: string, layer: SpecLayer = 'feature'): FeatureSpec {
   const lines = md.split('\n')
   let title = slug
   let version: string | null = null
@@ -169,6 +176,7 @@ export function parseSpec(slug: string, md: string): FeatureSpec {
   }
 
   return {
+    layer,
     slug,
     title,
     version,
@@ -193,28 +201,43 @@ export function clientSections(spec: FeatureSpec): SpecSection[] {
  * 목록 순서 — 서비스를 겪는 순서대로 읽히게 한다.
  * `순서:`가 없는 문서는 뒤로 보내고 제목 가나다순으로 정렬한다.
  */
+const LAYER_RANK: Record<SpecLayer, number> = { product: 0, overview: 1, feature: 2 }
+
 function compareSpecs(a: FeatureSpec, b: FeatureSpec): number {
+  if (a.layer !== b.layer) return LAYER_RANK[a.layer] - LAYER_RANK[b.layer]
   const oa = a.order ?? Number.MAX_SAFE_INTEGER
   const ob = b.order ?? Number.MAX_SAFE_INTEGER
   if (oa !== ob) return oa - ob
   return a.title.localeCompare(b.title, 'ko')
 }
 
-/** 허브 워크스페이스의 명세를 전부 읽는다. 없으면 빈 배열. */
-export async function readSpecs(workspacePath: string): Promise<FeatureSpec[]> {
-  const dir = join(workspacePath, 'specs', 'features')
-  let names: string[]
+async function readOne(path: string, slug: string, layer: SpecLayer): Promise<FeatureSpec | null> {
   try {
-    names = (await readdir(dir)).filter((n) => n.endsWith('.md'))
+    return parseSpec(slug, await readFile(path, 'utf8'), layer)
   } catch {
-    return []
+    // 아직 이 층이 없는 프로젝트가 있다 — 데모 저장소는 기능 명세만 갖는다
+    return null
+  }
+}
+
+/** 워크스페이스의 명세를 세 층 모두 읽는다. 없으면 빈 배열. */
+export async function readSpecs(workspacePath: string): Promise<FeatureSpec[]> {
+  const specsDir = join(workspacePath, 'specs')
+  const featuresDir = join(specsDir, 'features')
+
+  let names: string[] = []
+  try {
+    names = (await readdir(featuresDir)).filter((n) => n.endsWith('.md'))
+  } catch {
+    // 기능 명세가 없어도 product/overview는 있을 수 있다
   }
 
-  const specs = await Promise.all(
-    names.map(async (name) => {
-      const slug = name.replace(/\.md$/, '')
-      return parseSpec(slug, await readFile(join(dir, name), 'utf8'))
-    }),
-  )
-  return specs.sort(compareSpecs)
+  const all = await Promise.all([
+    readOne(join(specsDir, 'product.md'), 'product', 'product'),
+    readOne(join(specsDir, 'overview.md'), 'overview', 'overview'),
+    ...names.map((name) =>
+      readOne(join(featuresDir, name), name.replace(/\.md$/, ''), 'feature'),
+    ),
+  ])
+  return all.filter((s): s is FeatureSpec => s !== null).sort(compareSpecs)
 }

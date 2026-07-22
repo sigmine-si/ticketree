@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react'
 export interface SpecNavItem {
   slug: string
   title: string
+  layer: 'product' | 'overview' | 'feature'
   pending: number
   /** 제목 + 항목 + 제약 — 검색 대상 본문 */
   haystack: string
@@ -43,15 +44,20 @@ export function SpecNav({ items, current }: { items: SpecNavItem[]; current: str
       {shown.length === 0 ? (
         <p className="spec-empty">‘{q}’에 해당하는 내용이 없어요</p>
       ) : (
-        shown.map((s) => (
-          <Link
-            key={s.slug}
-            href={`/spec?f=${s.slug}`}
-            className={`spec-item${s.slug === current ? ' on' : ''}`}
-          >
-            {s.title}
-            {s.pending > 0 && <span className="flag" title="변경 예정" />}
-          </Link>
+        shown.map((s, i) => (
+          <div key={s.slug}>
+            {/* 제품·흐름과 기능 사이에만 선을 긋는다 — 층이 다르다는 걸 보이게 */}
+            {s.layer === 'feature' && shown[i - 1] && shown[i - 1]!.layer !== 'feature' && (
+              <p className="sh spec-divider">기능</p>
+            )}
+            <Link
+              href={`/spec?f=${s.slug}`}
+              className={`spec-item${s.slug === current ? ' on' : ''}`}
+            >
+              {s.title}
+              {s.pending > 0 && <span className="flag" title="변경 예정" />}
+            </Link>
+          </div>
         ))
       )}
     </aside>

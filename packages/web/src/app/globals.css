@@ -397,6 +397,7 @@ tbody tr:hover { background: #fafaf7; }
 .spec-search { width: 100%; box-sizing: border-box; margin: 0 0 6px; padding: 8px 10px; font-family: var(--sans); font-size: 13px; color: var(--ink); background: var(--page); border: 1px solid var(--line); border-radius: 8px; }
 .spec-search::placeholder { color: var(--faint); }
 .spec-search:focus { outline: none; border-color: var(--green); }
+.spec-divider { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
 .spec-empty { font-size: 12.5px; color: var(--faint); padding: 10px; line-height: 1.6; }
 .hist-item .hd { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-left: 8px; white-space: nowrap; }
 .crit .tag { font-family: var(--mono); font-size: 11px; color: var(--amber); background: var(--amber-tint); border-radius: 4px; padding: 1px 6px; margin-left: 6px; white-space: nowrap; }

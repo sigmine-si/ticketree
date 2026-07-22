@@ -75,6 +75,7 @@ export default async function SpecPage({
               items={specs.map((s) => ({
                 slug: s.slug,
                 title: s.title,
+                layer: s.layer,
                 pending: s.pendingReqTags.length,
                 haystack: [
                   s.title,
@@ -125,6 +126,7 @@ export default async function SpecPage({
                     </div>
                   )}
 
+                  {current.criteria.length > 0 && (
                   <div className="card crit-card">
                     <p className="ch">이렇게 동작해요</p>
                     <p className="cs">각 항목은 개발 완료 시 실제로 검증되는 기준이에요</p>
@@ -154,6 +156,7 @@ export default async function SpecPage({
                       </div>
                     ))}
                   </div>
+                  )}
 
                   {/* 알려진 제약 등 — 파일에 있는데 화면에 없으면 계약서가 아니다 */}
                   {clientSections(current).map((sec) => (
