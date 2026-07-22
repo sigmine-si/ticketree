@@ -11,7 +11,7 @@ import { runAgent, type StreamEvent } from '../agent/claude.js'
 import { firstRoundPrompt, INTAKE_SYSTEM } from '../jobs/intake-prompt.js'
 
 const db = createDb()
-const [project] = await db.select().from(projects).where(eq(projects.slug, 'cafe-app'))
+const [project] = await db.select().from(projects).where(eq(projects.slug, process.env.PROJECT_SLUG ?? 'cafe-app'))
 if (!project?.workspacePath) throw new Error('seed를 먼저 실행하세요')
 
 const toBe =

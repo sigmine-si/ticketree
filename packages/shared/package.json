@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./env": "./src/env.ts",
     "./status": "./src/status.ts",
     "./lanes": "./src/lanes.ts",
     "./agent-io": "./src/agent-io.ts",

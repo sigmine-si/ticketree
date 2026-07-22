@@ -26,7 +26,7 @@ const pool = createPool()
 const reqNo = Number(process.argv[2])
 const given = process.argv.slice(3)
 
-const [project] = await db.select().from(projects).where(eq(projects.slug, 'cafe-app'))
+const [project] = await db.select().from(projects).where(eq(projects.slug, process.env.PROJECT_SLUG ?? 'cafe-app'))
 const [request] = await db
   .select()
   .from(changeRequests)

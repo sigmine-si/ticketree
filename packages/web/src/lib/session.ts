@@ -9,6 +9,10 @@
  */
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { cookies } from 'next/headers'
+import { loadRootEnv } from '@ticketree/shared/env'
+
+// Next.js는 packages/web/.env 만 읽는다. 서명 키·OAuth 설정은 루트 .env에 있다.
+loadRootEnv()
 
 const COOKIE = 'tt_session'
 const SECRET = process.env.SESSION_SECRET ?? 'dev-only-insecure-secret'

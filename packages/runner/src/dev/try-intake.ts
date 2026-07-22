@@ -27,7 +27,7 @@ const pool = createPool()
 const toBe = process.argv[2] ?? '음료가 준비되면 손님이 알림을 받았으면 좋겠어요.'
 const asIs = process.argv[3] ?? null
 
-const [project] = await db.select().from(projects).where(eq(projects.slug, 'cafe-app'))
+const [project] = await db.select().from(projects).where(eq(projects.slug, process.env.PROJECT_SLUG ?? 'cafe-app'))
 if (!project) throw new Error('seed를 먼저 실행하세요')
 
 const [client] = await db

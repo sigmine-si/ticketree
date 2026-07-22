@@ -32,8 +32,9 @@ pnpm seed:demo    # 데모 프로젝트 '그린루프 몰' — 허브 repo를 Gi
 pnpm dev          # web + runner
 ```
 
-`.env.example`을 `.env`로 복사한다. 로컬에서는 `claude` CLI 로그인 상태를 그대로 쓰므로
-에이전트 토큰을 따로 넣지 않아도 된다.
+`.env.example`을 `.env`로 복사한다. 저장소 루트의 `.env` 하나만 쓴다 — 웹·러너·시드가
+모두 이 파일을 찾아 올린다(`packages/shared/src/env.ts`). 로컬에서는 `claude` CLI 로그인
+상태를 그대로 쓰므로 에이전트 토큰을 따로 넣지 않아도 된다.
 
 포털은 `/dev-login`, 관리자는 `/admin/login`으로 들어간다. 둘 다 로컬 전용 우회이며
 실제 인증(초대링크+PIN / GitHub OAuth)은 세션 레이어 위에 이미 붙어 있다.
@@ -79,6 +80,12 @@ pnpm seed:self    # 자기 자신을 프로젝트로 등록한다
 ```bash
 pnpm --filter @ticketree/runner exec tsx src/dev/try-intake.ts "원하는 변경 내용"
 pnpm --filter @ticketree/runner exec tsx src/dev/try-answer.ts <REQ_NO> "답변1" "답변2"
+```
+
+대상 프로젝트는 `PROJECT_SLUG`로 바꾼다 (기본값 `cafe-app`).
+
+```bash
+PROJECT_SLUG=ticketree pnpm --filter @ticketree/runner exec tsx src/dev/try-intake.ts "..."
 ```
 
 ## 진행 상황

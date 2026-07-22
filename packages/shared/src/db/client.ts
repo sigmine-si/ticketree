@@ -1,5 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
+// 루트 .env를 올린다 — DB를 쓰는 모든 진입점(웹·러너·시드)이 이 모듈을 지난다
+import '../env'
 import * as schema from './schema'
 
 export type Db = ReturnType<typeof createDb>
