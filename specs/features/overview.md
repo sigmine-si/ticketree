@@ -130,6 +130,17 @@ job의 result 이벤트에서 `total_cost_usd`와 modelUsage를 그대로 쌓는
 캐시 토큰(cache_creation + cache_read)을 입력에 합산한다 — 원가의 대부분이 여기서 나온다.
 이 금액은 **API 환산가이지 구독 실지출이 아니다.**
 
+### 미해결
+
+- **(미정) 프로덕션 빌드가 깨져 있다.** `next build`가 404·500을 프리렌더하다
+  "`<Html>` should not be imported outside of pages/_document"로 죽는다. app 라우터만
+  쓰고 pages 디렉터리도 next/document import도 없으며, react·react-dom·next 버전도
+  일치한다. `not-found.tsx`·`global-error.tsx`를 넣어도 같다(Next 15.5.20).
+  **로컬 개발만 가능하고 서버 배포는 이 문제부터 풀어야 한다.**
+- **(미정) 러너가 재시작되면 실행 중이던 job이 running으로 남고 아무도 줍지 않는다.**
+  `tsx watch`가 파일 변경으로 재시작할 때 실제로 발생했다. 지금은 사람이 DB에서
+  재등록해야 한다.
+
 ## 변경 이력
 
 - v1.0 2026-07-22 전체 흐름 최초 정의
