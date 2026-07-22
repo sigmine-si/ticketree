@@ -98,11 +98,28 @@ export async function requireAdmin(): Promise<Session> {
   return s
 }
 
-/** ADMIN_GITHUB_LOGINS 허용 목록 (§16-1). 비어 있으면 아무도 못 들어온다. */
-export function isAllowedAdmin(login: string): boolean {
-  const allowed = (process.env.ADMIN_GITHUB_LOGINS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-  return allowed.includes(login.toLowerCase())
+/** 아이디·비밀번호 둘 다 있어야 관리자 로그인이 열린다 (§16-1). */
+export function adminLoginConfigured(): boolean {
+  return Boolean(process.env.ADMIN_ID && process.env.ADMIN_PASSWORD)
+}
+
+/** 길이가 달라도 던지지 않는 상수시간 비교 */
+function safeEqual(a: string, b: string): boolean {
+  const ha = createHmac('sha256', SECRET).update(a).digest()
+  const hb = createHmac('sha256', SECRET).update(b).digest()
+  return timingSafeEqual(ha, hb)
+}
+
+/**
+ * ADMIN_ID / ADMIN_PASSWORD 대조 (§16-1).
+ * 둘 중 하나라도 비어 있으면 아무도 못 들어온다.
+ */
+export function verifyAdminCredentials(id: string, password: string): boolean {
+  const expectedId = process.env.ADMIN_ID
+  const expectedPassword = process.env.ADMIN_PASSWORD
+  if (!expectedId || !expectedPassword) return false
+  // 둘 다 비교해야 아이디 존재 여부가 응답 시간으로 새지 않는다
+  const idOk = safeEqual(id, expectedId)
+  const passwordOk = safeEqual(password, expectedPassword)
+  return idOk && passwordOk
 }

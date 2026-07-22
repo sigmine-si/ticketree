@@ -228,6 +228,8 @@ tbody tr:hover { background: #fafaf7; }
 .mfield label small { font-weight: 400; color: var(--faint); margin-left: 6px; }
 .mfield textarea { width: 100%; border: 1px solid var(--line-strong); border-radius: 10px; padding: 12px 14px; font-size: 14px; font-family: var(--sans); line-height: 1.6; min-height: 76px; resize: vertical; color: var(--ink); }
 .mfield textarea::placeholder { color: var(--faint); }
+.mfield input { width: 100%; border: 1px solid var(--line-strong); border-radius: 10px; padding: 11px 14px; font-size: 14px; font-family: var(--sans); color: var(--ink); }
+.mfield input::placeholder { color: var(--faint); }
 .mfoot { display: flex; align-items: center; gap: 9px; margin-top: 22px; }
 .mfoot .hint { font-size: 12px; color: var(--faint); margin-right: auto; line-height: 1.5; }
 
