@@ -13,6 +13,7 @@ import { db } from '@/lib/data'
 import { readSpecs } from '@/lib/specs'
 import { getSession } from '@/lib/session'
 import { TopBar } from '@/components/TopBar'
+import { SpecNav } from '@/components/SpecNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,19 +70,19 @@ export default async function SpecPage({
           </div>
         ) : (
           <div className="spec-grid">
-            <aside className="spec-side">
-              <p className="sh">기능</p>
-              {specs.map((s) => (
-                <Link
-                  key={s.slug}
-                  href={`/spec?f=${s.slug}`}
-                  className={`spec-item${s.slug === current?.slug ? ' on' : ''}`}
-                >
-                  {s.title}
-                  {s.pendingReqTags.length > 0 && <span className="flag" title="변경 예정" />}
-                </Link>
-              ))}
-            </aside>
+            <SpecNav
+              current={current?.slug ?? null}
+              items={specs.map((s) => ({
+                slug: s.slug,
+                title: s.title,
+                pending: s.pendingReqTags.length,
+                haystack: [
+                  s.title,
+                  ...s.criteria.map((c) => c.text),
+                  ...s.sections.flatMap((sec) => [sec.title, ...sec.items]),
+                ].join(' '),
+              }))}
+            />
 
             <div className="spec-main">
               {current && (
@@ -127,24 +128,46 @@ export default async function SpecPage({
                     <p className="ch">이렇게 동작해요</p>
                     <p className="cs">각 항목은 개발 완료 시 실제로 검증되는 기준이에요</p>
                     {current.criteria.map((c, i) => (
-                      <div className={`crit${c.done ? '' : ' pending'}`} key={i}>
-                        {c.done ? (
+                      <div className={`crit ${c.mark}`} key={i}>
+                        {c.mark === 'done' ? (
                           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.2">
                             <path d="M20 6L9 17l-5-5" />
                           </svg>
-                        ) : (
+                        ) : c.mark === 'pending' ? (
                           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.2">
                             <circle cx="12" cy="12" r="9" />
                             <path d="M12 7v5l3 3" />
                           </svg>
+                        ) : (
+                          // 상태를 단정할 수 없는 줄 — 완료로도 예정으로도 보이면 안 된다
+                          <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.2">
+                            <circle cx="12" cy="12" r="3.5" />
+                          </svg>
                         )}
                         <span>
                           {c.text}
-                          {!c.done && c.reqTag && <span className="tag">예정 · {c.reqTag}</span>}
+                          {c.mark === 'pending' && c.reqTag && (
+                            <span className="tag">예정 · {c.reqTag}</span>
+                          )}
                         </span>
                       </div>
                     ))}
                   </div>
+
+                  {/* 알려진 제약 등 — 파일에 있는데 화면에 없으면 계약서가 아니다 */}
+                  {current.sections.map((sec) => (
+                    <div className="card crit-card note-card" key={sec.title}>
+                      <p className="ch">{sec.title}</p>
+                      {sec.items.map((item, i) => (
+                        <div className="crit plain" key={i}>
+                          <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.2">
+                            <circle cx="12" cy="12" r="3.5" />
+                          </svg>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
 
                   {current.history.length > 0 && (
                     <div className="card hist">
@@ -154,7 +177,15 @@ export default async function SpecPage({
                       {current.history.map((h, i) => (
                         <div className="hist-item" key={i}>
                           <span className="hv">{h.version}</span>
-                          <span>{h.text}</span>
+                          <span>
+                            {h.text}
+                            {/* 날짜가 없는 옛 문서는, 최신 줄에 한해 문서의 마지막 변경일을 쓴다 */}
+                            {(h.date ?? (i === 0 ? current.lastChanged : null)) && (
+                              <span className="hd">
+                                {h.date ?? current.lastChanged}
+                              </span>
+                            )}
+                          </span>
                           {h.reqTag && (
                             <Link
                               className="hreq"

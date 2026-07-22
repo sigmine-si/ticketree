@@ -4,17 +4,24 @@
  * 진실은 Git이므로 DB가 아니라 허브 워크스페이스의 마크다운을 그대로 읽는다.
  * 웹과 러너는 같은 파일시스템에 있다 (§6).
  *
- * 파싱은 허브 CLAUDE.md가 에이전트에게 지시한 형식을 그대로 따른다.
- * 형식이 어긋난 줄은 버리지 않고 일반 항목으로 보여준다 — 클라이언트가
- * 빈 화면을 보는 것보다 낫다.
+ * 파싱 원칙: **아무것도 조용히 버리지 않는다.** 아는 형식은 아는 대로 렌더하고,
+ * 모르는 형식은 모르는 대로 보여준다. 클라이언트에게 명세는 계약서라,
+ * 파일에 있는데 화면에 없는 문장이 생기면 그 전제가 무너진다.
  */
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
+/**
+ * done    = 배포되어 지금 동작하는 항목 (- [x])
+ * pending = 승인됐지만 아직 배포 전 (- [ ])
+ * plain   = 체크박스 없이 적힌 줄. 우리 형식을 안 따르는 문서에서 온다 —
+ *           상태를 단정할 수 없으므로 완료로도 예정으로도 표시하지 않는다.
+ */
+export type Mark = 'done' | 'pending' | 'plain'
+
 export interface Criterion {
   text: string
-  /** false면 아직 배포 전 — "예정" 태그가 붙는다 */
-  done: boolean
+  mark: Mark
   /** 이 항목을 만든 요청 (예정 항목에만 있다) */
   reqTag: string | null
 }
@@ -22,7 +29,15 @@ export interface Criterion {
 export interface HistoryEntry {
   version: string
   reqTag: string | null
+  /** YYYY-MM-DD. 옛 문서에는 없다. */
+  date: string | null
   text: string
+}
+
+/** "이렇게 동작해요"·"변경 이력" 밖의 섹션. 알려진 제약 등이 여기 들어온다. */
+export interface SpecSection {
+  title: string
+  items: string[]
 }
 
 export interface FeatureSpec {
@@ -32,7 +47,10 @@ export interface FeatureSpec {
   title: string
   version: string | null
   lastChanged: string | null
+  /** 목록에서의 자리. 없으면 뒤로 밀린다 (§3 — 읽는 순서가 서비스 흐름을 따라야 한다) */
+  order: number | null
   criteria: Criterion[]
+  sections: SpecSection[]
   history: HistoryEntry[]
   /** 예정 항목이 있으면 상단에 안내가 뜬다 */
   pendingReqTags: string[]
@@ -41,18 +59,24 @@ export interface FeatureSpec {
 const PENDING = /^\((?:예정\s*·\s*)?(REQ-\d+)\)\s*/
 
 function parseCriterion(line: string): Criterion | null {
-  const m = line.match(/^-\s*\[( |x|X)\]\s*(.+)$/)
-  if (!m) return null
-  const done = m[1]!.toLowerCase() === 'x'
-  let text = m[2]!.trim()
-  let reqTag: string | null = null
+  if (!line) return null
 
+  const box = line.match(/^-\s*\[( |x|X)\]\s*(.+)$/)
+  // 체크박스가 없는 줄도 버리지 않는다. 우리가 만들지 않은 문서를 온보딩하면
+  // 대부분 이 형태다 — 버리면 클라이언트는 빈 화면을 본다.
+  const raw = box ? box[2]!.trim() : line.replace(/^[-*]\s*/, '').trim()
+  if (!raw) return null
+
+  const mark: Mark = box ? (box[1]!.toLowerCase() === 'x' ? 'done' : 'pending') : 'plain'
+
+  let text = raw
+  let reqTag: string | null = null
   const p = text.match(PENDING)
   if (p) {
     reqTag = p[1]!
     text = text.slice(p[0].length).trim()
   }
-  return { text, done, reqTag }
+  return { text, mark, reqTag }
 }
 
 /** v1.10이 v1.9보다 크도록 자리별로 비교한다 — 문자열 비교로는 뒤집힌다. */
@@ -67,10 +91,10 @@ function compareVersion(a: string, b: string): number {
 }
 
 function parseHistory(line: string): HistoryEntry | null {
-  // - v1.1 (REQ-001) 정산 예정일 표기를 …
-  const m = line.match(/^-\s*(v[\d.]+)\s*(?:\((REQ-\d+)\))?\s*(.*)$/)
+  // - v1.1 (REQ-001) 2026-07-22 정산 예정일 표기를 …   (날짜는 선택)
+  const m = line.match(/^-\s*(v[\d.]+)\s*(?:\((REQ-\d+)\))?\s*(\d{4}-\d{2}-\d{2})?\s*(.*)$/)
   if (!m) return null
-  return { version: m[1]!, reqTag: m[2] ?? null, text: m[3]!.trim() }
+  return { version: m[1]!, reqTag: m[2] ?? null, date: m[3] ?? null, text: m[4]!.trim() }
 }
 
 export function parseSpec(slug: string, md: string): FeatureSpec {
@@ -78,10 +102,13 @@ export function parseSpec(slug: string, md: string): FeatureSpec {
   let title = slug
   let version: string | null = null
   let lastChanged: string | null = null
+  let order: number | null = null
   const criteria: Criterion[] = []
   const history: HistoryEntry[] = []
+  const sections: SpecSection[] = []
 
-  let section: 'none' | 'criteria' | 'history' = 'none'
+  let section: 'none' | 'criteria' | 'history' | 'other' = 'none'
+  let current: SpecSection | null = null
 
   for (const raw of lines) {
     const line = raw.trim()
@@ -92,12 +119,28 @@ export function parseSpec(slug: string, md: string): FeatureSpec {
     }
     if (line.startsWith('## ')) {
       const h = line.slice(3).trim()
-      section = h.includes('변경 이력') ? 'history' : h.includes('동작') ? 'criteria' : 'none'
+      if (h.includes('변경 이력')) {
+        section = 'history'
+        current = null
+      } else if (h.includes('동작')) {
+        section = 'criteria'
+        current = null
+      } else {
+        // 모르는 섹션도 그대로 들고 간다 (알려진 제약, 참고 사항 등)
+        section = 'other'
+        current = { title: h, items: [] }
+        sections.push(current)
+      }
       continue
     }
     if (line.startsWith('버전:')) {
       version = line.match(/(v[\d.]+)/)?.[1] ?? null
       lastChanged = line.match(/마지막 변경\s*([\d-]+)/)?.[1] ?? null
+      continue
+    }
+    if (line.startsWith('순서:')) {
+      const n = Number(line.match(/(\d+)/)?.[1])
+      order = Number.isFinite(n) ? n : null
       continue
     }
 
@@ -107,6 +150,8 @@ export function parseSpec(slug: string, md: string): FeatureSpec {
     } else if (section === 'history') {
       const h = parseHistory(line)
       if (h) history.push(h)
+    } else if (section === 'other' && current && line) {
+      current.items.push(line.replace(/^[-*]\s*/, '').trim())
     }
   }
 
@@ -115,11 +160,26 @@ export function parseSpec(slug: string, md: string): FeatureSpec {
     title,
     version,
     lastChanged,
+    order,
     criteria,
+    sections: sections.filter((s) => s.items.length > 0),
     // 최신이 위로 온다. 파일에 어떤 순서로 쌓였든 화면은 항상 최신순이다.
     history: history.sort((a, b) => compareVersion(b.version, a.version)),
-    pendingReqTags: [...new Set(criteria.filter((c) => !c.done && c.reqTag).map((c) => c.reqTag!))],
+    pendingReqTags: [
+      ...new Set(criteria.filter((c) => c.mark === 'pending' && c.reqTag).map((c) => c.reqTag!)),
+    ],
   }
+}
+
+/**
+ * 목록 순서 — 서비스를 겪는 순서대로 읽히게 한다.
+ * `순서:`가 없는 문서는 뒤로 보내고 제목 가나다순으로 정렬한다.
+ */
+function compareSpecs(a: FeatureSpec, b: FeatureSpec): number {
+  const oa = a.order ?? Number.MAX_SAFE_INTEGER
+  const ob = b.order ?? Number.MAX_SAFE_INTEGER
+  if (oa !== ob) return oa - ob
+  return a.title.localeCompare(b.title, 'ko')
 }
 
 /** 허브 워크스페이스의 명세를 전부 읽는다. 없으면 빈 배열. */
@@ -138,5 +198,5 @@ export async function readSpecs(workspacePath: string): Promise<FeatureSpec[]> {
       return parseSpec(slug, await readFile(join(dir, name), 'utf8'))
     }),
   )
-  return specs.sort((a, b) => a.title.localeCompare(b.title, 'ko'))
+  return specs.sort(compareSpecs)
 }
