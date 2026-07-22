@@ -92,7 +92,8 @@ export function firstRoundPrompt(i: FirstRoundInput): string {
   if (i.attachmentNote) parts.push('', `**첨부**: ${i.attachmentNote}`)
   parts.push(
     '',
-    '먼저 specs/ 와 digests/ 를 읽어 현재 약속된 동작을 파악하고, 그 다음 실제 코드를 확인하라.',
+    '먼저 specs/ 와 코드 지도(digest.md 또는 digests/)를 읽어 현재 약속된 동작을 파악하고,',
+    '그 다음 실제 코드를 확인하라.',
   )
   return parts.join('\n')
 }
