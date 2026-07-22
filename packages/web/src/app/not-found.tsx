@@ -16,7 +16,8 @@ export default function NotFound() {
         </div>
       </div>
       <div className="card">
-        <Link className="btn" href="/requests">
+        {/* 여기서는 어느 프로젝트인지 알 수 없다 — 루트가 세션을 보고 갈라준다 */}
+        <Link className="btn" href="/">
           요청 목록으로
         </Link>
       </div>

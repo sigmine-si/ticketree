@@ -9,6 +9,7 @@
  */
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { clientPath } from '@/lib/routes'
 
 export interface SpecNavItem {
   slug: string
@@ -19,7 +20,15 @@ export interface SpecNavItem {
   haystack: string
 }
 
-export function SpecNav({ items, current }: { items: SpecNavItem[]; current: string | null }) {
+export function SpecNav({
+  items,
+  current,
+  slug,
+}: {
+  items: SpecNavItem[]
+  current: string | null
+  slug: string
+}) {
   const [q, setQ] = useState('')
 
   const shown = useMemo(() => {
@@ -51,7 +60,7 @@ export function SpecNav({ items, current }: { items: SpecNavItem[]; current: str
               <p className="sh spec-divider">기능</p>
             )}
             <Link
-              href={`/spec?f=${s.slug}`}
+              href={clientPath.spec(slug, s.slug)}
               className={`spec-item${s.slug === current ? ' on' : ''}`}
             >
               {s.title}

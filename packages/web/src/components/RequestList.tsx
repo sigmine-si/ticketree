@@ -13,6 +13,7 @@ import {
   type RequestStatus,
   type Stage,
 } from '@ticketree/shared/status'
+import { clientPath } from '@/lib/routes'
 import { StageTrack } from './StageTrack'
 import { NewRequestModal } from './NewRequestModal'
 
@@ -38,7 +39,16 @@ function filterOf(r: Row): Filter {
   return 'run'
 }
 
-export function RequestList({ rows }: { rows: Row[] }) {
+export function RequestList({
+  rows,
+  slug,
+  /** false면 관리자 열람 — 새 요청은 클라이언트만 낸다 */
+  canAct = true,
+}: {
+  rows: Row[]
+  slug: string
+  canAct?: boolean
+}) {
   const router = useRouter()
   const [filter, setFilter] = useState<Filter>('all')
   const [modal, setModal] = useState(false)
@@ -68,12 +78,14 @@ export function RequestList({ rows }: { rows: Row[] }) {
           <h1>요청 내역</h1>
           <p className="sub">클릭하면 대화와 견적을 확인할 수 있어요</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal(true)}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          새 요청
-        </button>
+        {canAct && (
+          <button className="btn btn-primary" onClick={() => setModal(true)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            새 요청
+          </button>
+        )}
       </div>
 
       <div className="ledger">
@@ -148,15 +160,21 @@ export function RequestList({ rows }: { rows: Row[] }) {
               <tr style={{ cursor: 'default' }}>
                 <td colSpan={5}>
                   <div className="empty">
-                    {rows.length === 0
-                      ? '아직 요청이 없어요 — 오른쪽 위 “새 요청”으로 시작해보세요'
-                      : '이 조건에 해당하는 요청이 없어요'}
+                    {rows.length > 0
+                      ? '이 조건에 해당하는 요청이 없어요'
+                      : canAct
+                        ? '아직 요청이 없어요 — 오른쪽 위 “새 요청”으로 시작해보세요'
+                        : '아직 요청이 없어요'}
                   </div>
                 </td>
               </tr>
             ) : (
               shown.map((r) => (
-                <RequestRow key={r.id} row={r} onOpen={() => router.push(`/requests/${r.reqNo}`)} />
+                <RequestRow
+                  key={r.id}
+                  row={r}
+                  onOpen={() => router.push(clientPath.request(slug, r.reqNo ?? 0))}
+                />
               ))
             )}
           </tbody>

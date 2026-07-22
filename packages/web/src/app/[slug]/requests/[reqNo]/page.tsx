@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { and, eq } from 'drizzle-orm'
-import { clientNote, jobs, projects, stageOf, type RequestFlag, type RequestStatus } from '@ticketree/shared'
+import { clientNote, jobs, stageOf, type RequestFlag, type RequestStatus } from '@ticketree/shared'
 import { db, getEstimate, getRequest, getThread } from '@/lib/data'
-import { getSession } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/scope'
+import { clientPath } from '@/lib/routes'
 import { TopBar } from '@/components/TopBar'
 import { BigTrack } from '@/components/StageTrack'
 import { Thread } from '@/components/Thread'
@@ -13,19 +14,17 @@ export const dynamic = 'force-dynamic'
 export default async function RequestPage({
   params,
 }: {
-  params: Promise<{ reqNo: string }>
+  params: Promise<{ slug: string; reqNo: string }>
 }) {
-  const session = await getSession()
-  if (!session?.projectId) redirect('/dev-login')
+  const { slug, reqNo } = await params
+  const { session, project, canAct } = await requireProjectAccess(slug)
 
-  const { reqNo } = await params
   const n = Number(reqNo)
   if (!Number.isInteger(n)) notFound()
 
-  const request = await getRequest(session.projectId, n)
+  const request = await getRequest(project.id, n)
   if (!request) notFound()
 
-  const [project] = await db.select().from(projects).where(eq(projects.id, session.projectId))
   const messages = await getThread(request.id)
 
   const active = await db
@@ -61,9 +60,9 @@ export default async function RequestPage({
 
   return (
     <>
-      <TopBar projectName={project?.name ?? ''} userName={session.name} />
+      <TopBar projectName={project.name} userName={session.name} slug={slug} canAct={canAct} />
       <main className="wrap">
-        <Link className="back" href="/requests">
+        <Link className="back" href={clientPath.requests(slug)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
@@ -107,8 +106,9 @@ export default async function RequestPage({
             })),
           }))}
           clientName={session.name}
-          projectName={project?.name ?? ''}
+          projectName={project.name}
           busy={busy}
+          canAct={canAct}
           canConfirm={canConfirm}
           quote={quote}
         />

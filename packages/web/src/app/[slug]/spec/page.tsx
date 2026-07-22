@@ -8,25 +8,26 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { and, eq, inArray } from 'drizzle-orm'
-import { changeRequests, projects } from '@ticketree/shared'
+import { changeRequests } from '@ticketree/shared'
 import { db } from '@/lib/data'
 import { clientSections, readSpecs } from '@/lib/specs'
-import { getSession } from '@/lib/session'
+import { requireProjectAccess } from '@/lib/scope'
+import { clientPath } from '@/lib/routes'
 import { TopBar } from '@/components/TopBar'
 import { SpecNav } from '@/components/SpecNav'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SpecPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ slug: string }>
   searchParams: Promise<{ f?: string }>
 }) {
-  const session = await getSession()
-  if (!session?.projectId) redirect('/dev-login')
-
-  const [project] = await db.select().from(projects).where(eq(projects.id, session.projectId))
-  if (!project?.workspacePath) redirect('/requests')
+  const { slug } = await params
+  const { session, project, canAct } = await requireProjectAccess(slug)
+  if (!project.workspacePath) redirect(clientPath.requests(slug))
 
   const specs = await readSpecs(project.workspacePath)
   const { f } = await searchParams
@@ -40,17 +41,20 @@ export default async function SpecPage({
         .select({ reqNo: changeRequests.reqNo, title: changeRequests.title })
         .from(changeRequests)
         .where(
-          and(
-            eq(changeRequests.projectId, session.projectId),
-            inArray(changeRequests.reqNo, reqNos),
-          ),
+          and(eq(changeRequests.projectId, project.id), inArray(changeRequests.reqNo, reqNos)),
         )
     : []
   const titleOf = new Map(openRequests.map((r) => [`REQ-${String(r.reqNo).padStart(3, '0')}`, r.title]))
 
   return (
     <>
-      <TopBar projectName={project.name} userName={session.name} active="spec" />
+      <TopBar
+        projectName={project.name}
+        userName={session.name}
+        slug={slug}
+        canAct={canAct}
+        active="spec"
+      />
       <main className="wrap">
         <div className="page-head">
           <div>
@@ -71,6 +75,7 @@ export default async function SpecPage({
         ) : (
           <div className="spec-grid">
             <SpecNav
+              slug={slug}
               current={current?.slug ?? null}
               items={specs.map((s) => ({
                 slug: s.slug,
@@ -115,7 +120,7 @@ export default async function SpecPage({
                         {current.pendingReqTags.map((t, i) => (
                           <span key={t}>
                             {i > 0 && ', '}
-                            <Link href={`/requests/${Number(t.replace('REQ-', ''))}`}>
+                            <Link href={clientPath.request(slug, Number(t.replace('REQ-', '')))}>
                               {t} {titleOf.get(t) ?? ''}
                             </Link>
                           </span>
@@ -193,7 +198,7 @@ export default async function SpecPage({
                           {h.reqTag && (
                             <Link
                               className="hreq"
-                              href={`/requests/${Number(h.reqTag.replace('REQ-', ''))}`}
+                              href={clientPath.request(slug, Number(h.reqTag.replace('REQ-', '')))}
                             >
                               {h.reqTag}
                             </Link>
