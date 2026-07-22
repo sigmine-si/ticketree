@@ -18,6 +18,15 @@ export interface RunOptions {
   appendSystemPrompt?: string
   /** 스트림 이벤트 콜백. 버퍼링 상태 문구와 원본 아카이브가 여기서 나온다. */
   onEvent?: (event: StreamEvent) => void
+  /**
+   * 최종 응답 텍스트가 생성되는 대로 조각으로 온다 (--include-partial-messages).
+   * thinking과 도구 입력은 오지 않는다 — 텍스트 블록만이다.
+   *
+   * 이 조각을 클라이언트에게 그대로 흘리지 않는다. 실측에서 첫 조각이
+   * "명세(specs/features/settlement.md:9," 였다 — 내부 경로가 그대로 나온다.
+   * 무엇을 보여줄지는 호출자가 progress-line으로 걸러 정한다.
+   */
+  onTextDelta?: (chunk: string) => void
   signal?: AbortSignal
 }
 
@@ -84,6 +93,9 @@ function buildArgs(o: RunOptions): string[] {
     policy.permissionMode,
     '--effort',
     policy.effort,
+    // 텍스트를 조각으로 받는다. 이게 없으면 assistant 메시지가 완성된 뒤에야 오고,
+    // 실측에서 그 시점이 33초 실행의 27초 지점이었다.
+    '--include-partial-messages',
   ]
   if (policy.tools) args.push('--tools', ...policy.tools)
   if (o.resumeSessionId) args.push('--resume', o.resumeSessionId)
@@ -129,6 +141,17 @@ export async function runAgent(o: RunOptions): Promise<RunResult> {
       model = ev.model
     }
     if (ev.type === 'result') result = ev
+    if (o.onTextDelta && ev.type === 'stream_event') {
+      const inner = ev.event as { type?: string; delta?: { type?: string; text?: string } }
+      if (inner?.type === 'content_block_delta' && inner.delta?.type === 'text_delta') {
+        // thinking_delta·input_json_delta는 여기 걸리지 않는다 — 의도적이다
+        o.onTextDelta(inner.delta.text ?? '')
+      } else if (inner?.type === 'content_block_stop') {
+        // 블록 경계를 줄바꿈으로 알린다. 에이전트가 줄 끝에 개행을 안 넣는 경우가
+        // 있어서, 이게 없으면 앞 블록의 문장과 다음 블록의 문장이 한 줄로 붙는다.
+        o.onTextDelta('\n')
+      }
+    }
     o.onEvent?.(ev)
   })
 

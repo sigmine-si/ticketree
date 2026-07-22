@@ -23,6 +23,7 @@ import {
   type RequestStatus,
 } from '@ticketree/shared'
 import { runAgent } from '../agent/claude.js'
+import { createProgressReader } from '../agent/progress.js'
 import { statusTextFrom } from '../agent/status-text.js'
 import { setStatusText, type JobOutcome } from '../queue.js'
 import { answerRoundPrompt, firstRoundPrompt, INTAKE_SYSTEM } from './intake-prompt.js'
@@ -71,6 +72,14 @@ export async function runIntakeJob(db: Db, job: ClaimedJob): Promise<JobOutcome>
 
   const policy = policyForJob(job.kind)
   let lastText = ''
+  const progress = createProgressReader()
+
+  /** 실패해도 job을 죽이지 않는다 — 버퍼링 문구는 부가 정보다. */
+  const show = (text: string) => {
+    if (!text || text === lastText) return
+    lastText = text
+    void setStatusText(db, job.id, text).catch(() => {})
+  }
 
   const run = await runAgent({
     prompt,
@@ -78,13 +87,14 @@ export async function runIntakeJob(db: Db, job: ClaimedJob): Promise<JobOutcome>
     policy,
     resumeSessionId: isFirstRound ? undefined : (session?.sessionId ?? undefined),
     appendSystemPrompt: INTAKE_SYSTEM,
+    // 에이전트가 남긴 진행 문구가 있으면 그게 이긴다 — 고정 문구보다 구체적이다
+    onTextDelta: (chunk) => {
+      for (const line of progress.push(chunk)) show(line)
+    },
     onEvent: (ev) => {
-      const text = statusTextFrom(ev)
-      if (text && text !== lastText) {
-        lastText = text
-        // 실패해도 job을 죽이지 않는다 — 버퍼링 문구는 부가 정보다
-        void setStatusText(db, job.id, text).catch(() => {})
-      }
+      // 진행 문구가 아직 하나도 없을 때만 고정 문구를 쓴다
+      if (lastText) return
+      show(statusTextFrom(ev) ?? '')
     },
   })
 

@@ -5,6 +5,7 @@
  * 라운드 상한은 없고, 종료 조건은 "변경 요청서가 확정 가능한가" 하나뿐이다.
  */
 import type { AgentQuestion } from '@ticketree/shared'
+import { PROGRESS_INSTRUCTION } from '../agent/progress.js'
 
 export const INTAKE_SYSTEM = `당신은 외주 개발팀의 요구사항 분석 담당이다. 클라이언트의 변경 요청을 대화로 확정하는 일을 한다.
 
@@ -69,7 +70,9 @@ escalate는 다음일 때만 쓴다:
 
 outcome이 questions면 questions를 채우고 summary는 비운다.
 outcome이 ready면 summary를 채우고 questions는 빈 배열로 둔다.
-러프 견적은 범위로 낸다. 확정 견적은 다음 단계에서 따로 산출한다.`
+러프 견적은 범위로 낸다. 확정 견적은 다음 단계에서 따로 산출한다.
+
+${PROGRESS_INSTRUCTION}`
 
 export interface FirstRoundInput {
   asIs: string | null
