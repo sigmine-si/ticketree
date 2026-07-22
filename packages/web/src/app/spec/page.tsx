@@ -10,7 +10,7 @@ import { redirect } from 'next/navigation'
 import { and, eq, inArray } from 'drizzle-orm'
 import { changeRequests, projects } from '@ticketree/shared'
 import { db } from '@/lib/data'
-import { readSpecs } from '@/lib/specs'
+import { clientSections, readSpecs } from '@/lib/specs'
 import { getSession } from '@/lib/session'
 import { TopBar } from '@/components/TopBar'
 import { SpecNav } from '@/components/SpecNav'
@@ -79,7 +79,8 @@ export default async function SpecPage({
                 haystack: [
                   s.title,
                   ...s.criteria.map((c) => c.text),
-                  ...s.sections.flatMap((sec) => [sec.title, ...sec.items]),
+                  // 내부 섹션은 검색으로도 닿으면 안 된다
+                  ...clientSections(s).flatMap((sec) => [sec.title, ...sec.items]),
                 ].join(' '),
               }))}
             />
@@ -155,7 +156,7 @@ export default async function SpecPage({
                   </div>
 
                   {/* 알려진 제약 등 — 파일에 있는데 화면에 없으면 계약서가 아니다 */}
-                  {current.sections.map((sec) => (
+                  {clientSections(current).map((sec) => (
                     <div className="card crit-card note-card" key={sec.title}>
                       <p className="ch">{sec.title}</p>
                       {sec.items.map((item, i) => (

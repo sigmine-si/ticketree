@@ -34,10 +34,23 @@ export interface HistoryEntry {
   text: string
 }
 
-/** "이렇게 동작해요"·"변경 이력" 밖의 섹션. 알려진 제약 등이 여기 들어온다. */
+/**
+ * "이렇게 동작해요"·"변경 이력" 밖의 섹션. 알려진 제약, 구현 규칙 등이 여기 들어온다.
+ *
+ * 계약(클라이언트가 승인하는 문장)과 설계(우리가 지키는 규칙)를 한 파일에 둔다.
+ * 문서가 갈리면 설계가 계약을 따라가지 못하고 썩는다. 대신 **화면에서 가른다** —
+ * 클라이언트에게 `status='scheduled'` 같은 줄을 보여주면 승인할 수 없는 문서가 된다.
+ */
 export interface SpecSection {
   title: string
   items: string[]
+  /** true면 클라이언트 화면에 내보내지 않는다. 관리자는 명세 PR의 diff로 본다. */
+  internal: boolean
+}
+
+/** 제목만 보고 내부 섹션인지 판정한다. 표시하지 않는 쪽이 기본값이 아니므로 명시적이어야 한다. */
+function isInternalHeading(h: string): boolean {
+  return h.includes('내부') || h.includes('구현 규칙') || h.includes('설계')
 }
 
 export interface FeatureSpec {
@@ -126,9 +139,9 @@ export function parseSpec(slug: string, md: string): FeatureSpec {
         section = 'criteria'
         current = null
       } else {
-        // 모르는 섹션도 그대로 들고 간다 (알려진 제약, 참고 사항 등)
+        // 모르는 섹션도 그대로 들고 간다 (알려진 제약, 구현 규칙 등)
         section = 'other'
-        current = { title: h, items: [] }
+        current = { title: h, items: [], internal: isInternalHeading(h) }
         sections.push(current)
       }
       continue
@@ -169,6 +182,11 @@ export function parseSpec(slug: string, md: string): FeatureSpec {
       ...new Set(criteria.filter((c) => c.mark === 'pending' && c.reqTag).map((c) => c.reqTag!)),
     ],
   }
+}
+
+/** 클라이언트에게 보여줄 섹션만. 페이지가 이걸 안 거치고 sections를 직접 쓰면 설계가 샌다. */
+export function clientSections(spec: FeatureSpec): SpecSection[] {
+  return spec.sections.filter((s) => !s.internal)
 }
 
 /**
