@@ -57,7 +57,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
           .limit(1)
 
         if (running) {
-          const text = running.statusText ?? '관련 코드를 확인하고 있어요'
+          const text = running.statusText ?? '요청 내용을 확정하기 위해 살펴보고 있어요'
           if (text !== lastStatusText) {
             lastStatusText = text
             send('status', { text })

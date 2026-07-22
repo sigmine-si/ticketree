@@ -108,7 +108,7 @@ export function Thread({
       {busy && (
         <div className="status-line">
           <span className="spinner" role="status" aria-label="확인 중" />
-          <span>코드를 확인하고 있어요 — 잠시 후 질문 또는 견적이 도착합니다</span>
+          <span>요청 내용을 확정하기 위해 살펴보고 있어요 — 잠시 후 질문 또는 견적이 도착합니다</span>
         </div>
       )}
 
