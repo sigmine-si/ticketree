@@ -138,3 +138,31 @@ export type SpecDraftResult = z.infer<typeof specDraftResultSchema>
 export function parseSpecDraftResult(text: string): SpecDraftResult {
   return specDraftResultSchema.parse(extractJsonBlock(text))
 }
+
+/**
+ * 구현 job의 결과 — §2, §6
+ *
+ * 에이전트는 코드를 고치고 테스트를 돌린다. 커밋·PR은 러너가 한다 (§1).
+ */
+export const implementationResultSchema = z.object({
+  /** 무엇을 어떻게 구현했는지 — 관리자가 읽을 요약 */
+  summary: z.string(),
+  /** 손댄 파일 경로 */
+  changed_files: z.array(z.string()).default([]),
+  /**
+   * 검증 상태.
+   *  passed  — 테스트를 돌렸고 통과했다
+   *  none    — 돌릴 테스트가 없었다
+   *  failed  — 테스트가 있는데 실패했다(이 경우 원인을 notes에)
+   */
+  tests: z.enum(['passed', 'none', 'failed']).default('none'),
+  /** 미리보기로 확인해야 할 지점 등 관리자용 메모 */
+  notes: z.string().default(''),
+  /** 구현 중 부딪힌, 명세로는 판단할 수 없는 문제 (있으면 에스컬레이션) */
+  blocker: z.string().nullable().default(null),
+})
+export type ImplementationResult = z.infer<typeof implementationResultSchema>
+
+export function parseImplementationResult(text: string): ImplementationResult {
+  return implementationResultSchema.parse(extractJsonBlock(text))
+}

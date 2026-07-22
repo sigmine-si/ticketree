@@ -12,6 +12,9 @@ import { runIntakeJob } from './jobs/intake.js'
 import { runEstimationJob } from './jobs/estimation.js'
 import { runSpecDraftJob } from './jobs/spec-draft.js'
 import { runSpecMergeJob } from './jobs/spec-merge.js'
+import { runImplementationJob } from './jobs/implementation.js'
+import { runDeployJob } from './jobs/deploy.js'
+import { runDeployFinalizeJob } from './jobs/deploy-finalize.js'
 
 const RUNNER_ID = `runner-${process.pid}-${randomUUID().slice(0, 8)}`
 const POLL_INTERVAL_MS = Number(process.env.RUNNER_POLL_MS ?? 2000)
@@ -62,6 +65,12 @@ async function dispatch(job: ClaimedJob): Promise<void> {
       return void (await finishJob(db, job.id, await runSpecDraftJob(db, job)))
     case 'spec_merge':
       return void (await finishJob(db, job.id, await runSpecMergeJob(db, job)))
+    case 'implementation':
+      return void (await finishJob(db, job.id, await runImplementationJob(db, job)))
+    case 'deploy':
+      return void (await finishJob(db, job.id, await runDeployJob(db, job)))
+    case 'deploy_finalize':
+      return void (await finishJob(db, job.id, await runDeployFinalizeJob(db, job)))
     default:
       throw new Error(`job kind '${job.kind}' is not implemented yet`)
   }

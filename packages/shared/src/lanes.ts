@@ -17,6 +17,7 @@ export const JOB_KINDS = [
   'implementation',
   'onboarding',
   'deploy',
+  'deploy_finalize',
 ] as const
 export type JobKind = (typeof JOB_KINDS)[number]
 
@@ -32,13 +33,14 @@ export const LANE_OF_JOB: Record<JobKind, Lane> = {
   spec_draft: 'spec',
   implementation: 'work',
   onboarding: 'work',
-  // 아래 둘은 에이전트를 쓰지 않는다 — 러너가 직접 머지·배포한다 (§1).
+  // 아래 셋은 에이전트를 쓰지 않는다 — 러너가 직접 머지·배포한다 (§1).
   spec_merge: 'work',
   deploy: 'work',
+  deploy_finalize: 'work',
 }
 
 /** 에이전트를 띄우지 않고 러너가 직접 처리하는 job. 비가역적 동작이 여기 모인다. */
-export const RUNNER_ONLY_JOBS: readonly JobKind[] = ['spec_merge', 'deploy']
+export const RUNNER_ONLY_JOBS: readonly JobKind[] = ['spec_merge', 'deploy', 'deploy_finalize']
 
 export interface LanePolicy {
   /** --tools 화이트리스트. undefined면 전체 도구 허용(work 레인). */

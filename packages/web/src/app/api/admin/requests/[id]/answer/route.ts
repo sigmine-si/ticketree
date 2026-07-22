@@ -54,6 +54,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     content: `[운영자 해석] ${parsed.data.answer}`,
   })
 
+  // 어느 단계에서 멈췄는지에 따라 재개할 job이 다르다.
+  // 구현 중 막힌 것이면 구현을 다시 돌리고, 접수 단계면 대화 라운드를 재개한다.
+  const resumeKind = request.flagFromStatus === 'developing' ? 'implementation' : 'intake_round'
+
   await db
     .update(changeRequests)
     .set({ flag: null, flagFromStatus: null, updatedAt: new Date() })
@@ -61,12 +65,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   await logEvent(db, request.id, { kind: 'admin', id: admin.userId }, {
     escalationAnswered: true,
+    resumeKind,
   })
 
   await enqueueJob(db, {
     projectId: request.projectId,
     requestId: request.id,
-    kind: 'intake_round',
+    kind: resumeKind,
   })
 
   return NextResponse.json({ ok: true })

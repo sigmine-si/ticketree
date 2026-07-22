@@ -21,8 +21,12 @@ async function run(bin: string, args: string[], cwd: string): Promise<string> {
 export const git = (cwd: string, ...args: string[]) => run('git', args, cwd)
 export const gh = (cwd: string, ...args: string[]) => run('gh', args, cwd)
 
+const tag = (reqNo: number) => `REQ-${String(reqNo).padStart(3, '0')}`
 export function specBranch(reqNo: number): string {
-  return `spec/REQ-${String(reqNo).padStart(3, '0')}`
+  return `spec/${tag(reqNo)}`
+}
+export function devBranch(reqNo: number): string {
+  return `dev/${tag(reqNo)}`
 }
 
 /**
@@ -56,8 +60,38 @@ export async function pushBranch(cwd: string, branch: string): Promise<void> {
 }
 
 /** main 대비 diff. 검토 화면이 GitHub을 다시 부르지 않도록 여기서 잡아둔다. */
-export async function diffAgainstMain(cwd: string): Promise<string> {
-  return git(cwd, 'diff', 'origin/main...HEAD', '--', 'specs/')
+export async function diffAgainstMain(cwd: string, ...paths: string[]): Promise<string> {
+  const scope = paths.length ? paths : ['.']
+  return git(cwd, 'diff', 'origin/main', '--', ...scope)
+}
+
+/**
+ * 구현 작업장을 연다 — 별개 worktree. 프로젝트·레인 락이 동시 실행을 막지만,
+ * worktree는 main 체크아웃(명세 화면이 읽는다)과 물리적으로 분리해준다 (§6).
+ * 같은 이름이 남아 있으면 지우고 새로 판다 — 재시도가 깨끗해야 한다.
+ */
+export async function addWorktree(
+  mainCwd: string,
+  worktreePath: string,
+  branch: string,
+): Promise<void> {
+  await git(mainCwd, 'fetch', 'origin', 'main')
+  await git(mainCwd, 'worktree', 'remove', '--force', worktreePath).catch(() => {})
+  await git(mainCwd, 'branch', '-D', branch).catch(() => {})
+  await git(mainCwd, 'worktree', 'add', '-b', branch, worktreePath, 'origin/main')
+}
+
+export async function removeWorktree(mainCwd: string, worktreePath: string): Promise<void> {
+  await git(mainCwd, 'worktree', 'remove', '--force', worktreePath).catch(() => {})
+}
+
+/**
+ * 에이전트가 남긴 커밋을 지우되 파일 변경은 유지한다.
+ * 커밋 메시지·경로를 러너가 결정적으로 다시 만들기 위해, 에이전트가 중간에
+ * git을 만졌더라도 여기서 origin/main 기준으로 되돌린다.
+ */
+export async function resetToMainKeepingChanges(cwd: string): Promise<void> {
+  await git(cwd, 'reset', '--mixed', 'origin/main')
 }
 
 export interface CreatedPr {

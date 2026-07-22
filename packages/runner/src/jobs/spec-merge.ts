@@ -7,6 +7,7 @@
 import { and, eq } from 'drizzle-orm'
 import {
   changeRequests,
+  enqueueJob,
   projects,
   pullRequests,
   specVersions,
@@ -61,6 +62,13 @@ export async function runSpecMergeJob(db: Db, job: ClaimedJob): Promise<JobOutco
     .where(and(eq(specVersions.requestId, request.id), eq(specVersions.status, 'proposed')))
 
   await transition(db, request.id, 'queued_dev', SYSTEM, { mergedPr: pr.prNumber })
+
+  // 명세가 머지됐으니 구현을 시작한다 (§2). 구현은 방금 머지된 명세를 기준으로 삼는다.
+  await enqueueJob(db, {
+    projectId: job.projectId,
+    requestId: request.id,
+    kind: 'implementation',
+  })
 
   return {
     status: 'done',

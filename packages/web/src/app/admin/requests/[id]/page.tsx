@@ -7,6 +7,7 @@ import { getReviewDetail, ledger } from '@/lib/admin'
 import { decisionOf, DECISION_LABEL } from '@/lib/decision'
 import { AdminTopBar } from '@/components/AdminTopBar'
 import { ReviewActions } from '@/components/ReviewActions'
+import { DeployActions } from '@/components/DeployActions'
 import { EscalationAnswer } from '@/components/EscalationAnswer'
 import { SpecDiff } from '@/components/SpecDiff'
 
@@ -20,7 +21,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   const [detail, l] = await Promise.all([getReviewDetail(id), ledger()])
   if (!detail) notFound()
 
-  const { request, project, intake, estimation, estimate, qa, jobs, similar, specPr } = detail
+  const { request, project, intake, estimation, estimate, qa, jobs, similar, specPr, codePr } =
+    detail
   const status = request.status as RequestStatus
   const flag = request.flag as RequestFlag | null
   const decision = decisionOf(status, flag, false)
@@ -153,6 +155,21 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                 </p>
               </div>
             )}
+
+            {codePr?.diff && (
+              <SpecDiff
+                diff={codePr.diff}
+                prNumber={codePr.number}
+                url={codePr.url}
+                status={codePr.status}
+                title="코드 변경"
+                caption={
+                  status === 'in_review'
+                    ? '이 코드가 명세를 만족하는지 확인하고 배포를 승인해요'
+                    : '머지된 코드 변경'
+                }
+              />
+            )}
           </div>
 
           <aside className="dside">
@@ -168,6 +185,13 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                 similar={similar}
                 queueDepth={l.queued}
                 prNumber={specPr?.number ?? null}
+              />
+            ) : status === 'in_review' || status === 'awaiting_manual_deploy' ? (
+              <DeployActions
+                requestId={request.id}
+                stage={status}
+                prNumber={codePr?.number ?? null}
+                previewUrl={codePr?.previewUrl ?? null}
               />
             ) : (
               <div className="card">

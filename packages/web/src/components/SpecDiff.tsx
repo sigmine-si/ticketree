@@ -50,19 +50,23 @@ export function SpecDiff({
   prNumber,
   url,
   status,
+  title = 'Spec 변경안',
+  caption,
 }: {
   diff: string
   prNumber: number
   url: string
   status: string
+  title?: string
+  caption?: string
 }) {
   const files = parse(diff)
 
   return (
     <div className="card">
-      <p className="ch">Spec 변경안</p>
+      <p className="ch">{title}</p>
       <p className="cs">
-        승인하면 이 변경이 명세에 반영되고 개발이 시작돼요 ·{' '}
+        {caption ?? '승인하면 이 변경이 명세에 반영되고 개발이 시작돼요'} ·{' '}
         <a href={url} target="_blank" rel="noreferrer" style={{ color: 'var(--green)' }}>
           GitHub PR #{prNumber} ↗
         </a>

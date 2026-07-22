@@ -205,14 +205,18 @@ export interface ReviewDetail {
   }>
   /** 유사 규모 과거 건 평균 — 견적 조정의 근거 (§8) */
   similar: { n: number; avgCostUsd: number; avgHours: number | null }
-  /** 허브 repo의 Spec PR (§6). 승인 근거 3종 중 첫 번째. */
-  specPr: {
-    number: number
-    status: string
-    branch: string | null
-    diff: string | null
-    url: string
-  } | null
+  /** Spec PR (§6). 승인 근거 3종 중 첫 번째. */
+  specPr: PrView | null
+  /** 코드 PR — in_review 이후 배포 검토의 근거. */
+  codePr: (PrView & { previewUrl: string | null }) | null
+}
+
+export interface PrView {
+  number: number
+  status: string
+  branch: string | null
+  diff: string | null
+  url: string
 }
 
 export async function getReviewDetail(requestId: string): Promise<ReviewDetail | null> {
@@ -263,6 +267,13 @@ export async function getReviewDetail(requestId: string): Promise<ReviewDetail |
     .orderBy(desc(pullRequests.createdAt))
     .limit(1)
 
+  const [codePr] = await db
+    .select()
+    .from(pullRequests)
+    .where(and(eq(pullRequests.requestId, requestId), eq(pullRequests.kind, 'code')))
+    .orderBy(desc(pullRequests.createdAt))
+    .limit(1)
+
   const [similar] = await db
     .select({
       n: sql<number>`count(distinct ${jobs.requestId})::int`,
@@ -298,6 +309,16 @@ export async function getReviewDetail(requestId: string): Promise<ReviewDetail |
           branch: specPr.branch,
           diff: specPr.diff,
           url: `https://github.com/${project!.hubRepo}/pull/${specPr.prNumber}`,
+        }
+      : null,
+    codePr: codePr
+      ? {
+          number: codePr.prNumber,
+          status: codePr.status,
+          branch: codePr.branch,
+          diff: codePr.diff,
+          url: `https://github.com/${project!.hubRepo}/pull/${codePr.prNumber}`,
+          previewUrl: codePr.previewUrl,
         }
       : null,
   }
