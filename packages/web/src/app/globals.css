@@ -393,7 +393,18 @@ tbody tr:hover { background: #fafaf7; }
 .crit.plain svg { stroke: var(--faint); fill: var(--faint); }
 .crit.plain { color: var(--sub); }
 .note-card { margin-top: 14px; }
-.note-card .crit:first-of-type { border-top: none; }
+.sb-h { font-size: 13px; font-weight: 600; margin: 16px 0 6px; }
+.sb-h:first-child { margin-top: 4px; }
+.sb-p { font-size: 14px; line-height: 1.75; margin: 8px 0; color: var(--ink); }
+.sb-list { margin: 8px 0; padding-left: 18px; }
+.sb-list li { font-size: 14px; line-height: 1.75; margin: 4px 0; }
+.sb-code { font-family: var(--mono); font-size: 12.5px; line-height: 1.6; background: var(--page); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 10px 0; overflow-x: auto; white-space: pre; }
+.sb-tablewrap { overflow-x: auto; margin: 10px 0; }
+.sb-table { border-collapse: collapse; font-size: 13.5px; width: 100%; }
+.sb-table th, .sb-table td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; line-height: 1.6; }
+.sb-table th { background: var(--page); font-weight: 600; white-space: nowrap; }
+.note-card code, .crit code { font-family: var(--mono); font-size: 12.5px; background: var(--page); border-radius: 4px; padding: 1px 5px; }
+.note-card a { color: var(--green-deep); }
 .spec-search { width: 100%; box-sizing: border-box; margin: 0 0 6px; padding: 8px 10px; font-family: var(--sans); font-size: 13px; color: var(--ink); background: var(--page); border: 1px solid var(--line); border-radius: 8px; }
 .spec-search::placeholder { color: var(--faint); }
 .spec-search:focus { outline: none; border-color: var(--green); }
