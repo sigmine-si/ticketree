@@ -1,14 +1,18 @@
+/**
+ * 관리자 로그인 — 아이디 + 비밀번호 (§16-1)
+ *
+ * 자격증명은 .env의 ADMIN_ID / ADMIN_PASSWORD 하나뿐이다.
+ * 통과한 뒤에야 users 행을 만든다 — 틀린 시도는 아무 흔적도 남기지 않는다.
+ */
 import { redirect } from 'next/navigation'
+import { and, eq } from 'drizzle-orm'
 import { users } from '@ticketree/shared'
-import { eq } from 'drizzle-orm'
 import { db } from '@/lib/data'
-import { setSession } from '@/lib/session'
+import { adminLoginConfigured, setSession, verifyAdminCredentials } from '@/lib/session'
 
 const ERRORS: Record<string, string> = {
-  state: '로그인 요청이 만료됐어요. 다시 시도해주세요.',
-  token: 'GitHub 인증에 실패했어요.',
-  profile: 'GitHub 계정 정보를 가져오지 못했어요.',
-  not_allowed: '이 계정은 관리자 목록에 없어요.',
+  invalid: '아이디 또는 비밀번호가 맞지 않아요.',
+  unconfigured: '관리자 계정이 아직 설정되지 않았어요.',
 }
 
 export default async function AdminLogin({
@@ -17,23 +21,36 @@ export default async function AdminLogin({
   searchParams: Promise<{ error?: string }>
 }) {
   const { error } = await searchParams
-  const configured = Boolean(process.env.GITHUB_CLIENT_ID)
-  const isDev = process.env.NODE_ENV !== 'production'
+  const configured = adminLoginConfigured()
 
-  // 개발 편의용 우회. 프로덕션 빌드에서는 렌더되지 않는다.
-  async function devLogin() {
+  async function login(formData: FormData) {
     'use server'
-    if (process.env.NODE_ENV === 'production') return
-    const [existing] = await db.select().from(users).where(eq(users.kind, 'admin'))
-    const id =
-      existing?.id ??
-      (
-        await db
-          .insert(users)
-          .values({ kind: 'admin', projectId: null, name: '개발 관리자' })
-          .returning({ id: users.id })
-      )[0]!.id
-    await setSession({ userId: id, projectId: null, kind: 'admin', name: existing?.name ?? '개발 관리자' })
+    const id = String(formData.get('id') ?? '')
+    const password = String(formData.get('password') ?? '')
+
+    if (!adminLoginConfigured()) redirect('/admin/login?error=unconfigured')
+    if (!verifyAdminCredentials(id, password)) redirect('/admin/login?error=invalid')
+
+    // 자격증명을 통과한 계정만 여기 도달한다
+    const name = process.env.ADMIN_ID!
+    const [existing] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.kind, 'admin'), eq(users.name, name)))
+
+    let userId: string
+    if (existing) {
+      await db.update(users).set({ lastSeenAt: new Date() }).where(eq(users.id, existing.id))
+      userId = existing.id
+    } else {
+      const [created] = await db
+        .insert(users)
+        .values({ kind: 'admin', projectId: null, name, lastSeenAt: new Date() })
+        .returning({ id: users.id })
+      userId = created!.id
+    }
+
+    await setSession({ userId, projectId: null, kind: 'admin', name })
     redirect('/admin')
   }
 
@@ -42,7 +59,7 @@ export default async function AdminLogin({
       <div className="page-head">
         <div>
           <h1>관리자</h1>
-          <p className="sub">GitHub 계정으로 로그인해요</p>
+          <p className="sub">아이디와 비밀번호로 로그인해요</p>
         </div>
       </div>
 
@@ -58,28 +75,33 @@ export default async function AdminLogin({
 
       <div className="card">
         {configured ? (
-          <a className="btn btn-primary" href="/api/auth/github" style={{ width: '100%', justifyContent: 'center' }}>
-            GitHub으로 로그인
-          </a>
+          <form action={login}>
+            <div className="mfield">
+              <label htmlFor="admin-id">아이디</label>
+              <input id="admin-id" name="id" type="text" autoComplete="username" autoFocus required />
+            </div>
+
+            <div className="mfield">
+              <label htmlFor="admin-password">비밀번호</label>
+              <input
+                id="admin-password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </div>
+
+            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+              로그인
+            </button>
+          </form>
         ) : (
           <p style={{ fontSize: 13.5, color: 'var(--sub)', lineHeight: 1.7 }}>
-            <strong>GitHub OAuth가 아직 설정되지 않았어요.</strong>
+            <strong>관리자 계정이 아직 설정되지 않았어요.</strong>
             <br />
-            GitHub에서 OAuth App을 만들고 <code>GITHUB_CLIENT_ID</code>,{' '}
-            <code>GITHUB_CLIENT_SECRET</code>, <code>ADMIN_GITHUB_LOGINS</code>를 .env에
-            넣어주세요.
+            <code>ADMIN_ID</code>와 <code>ADMIN_PASSWORD</code>를 .env에 넣어주세요.
           </p>
-        )}
-
-        {isDev && (
-          <form action={devLogin} style={{ marginTop: 14 }}>
-            <button className="btn" style={{ width: '100%' }}>
-              개발용 관리자로 들어가기
-            </button>
-            <p style={{ fontSize: 12, color: 'var(--faint)', marginTop: 8, textAlign: 'center' }}>
-              로컬 개발에서만 보여요
-            </p>
-          </form>
         )}
       </div>
     </main>

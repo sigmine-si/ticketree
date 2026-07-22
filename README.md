@@ -36,15 +36,14 @@ pnpm dev          # web + runner
 모두 이 파일을 찾아 올린다(`packages/shared/src/env.ts`). 로컬에서는 `claude` CLI 로그인
 상태를 그대로 쓰므로 에이전트 토큰을 따로 넣지 않아도 된다.
 
-포털은 `/dev-login`, 관리자는 `/admin/login`으로 들어간다. 둘 다 로컬 전용 우회이며
-실제 인증(초대링크+PIN / GitHub OAuth)은 세션 레이어 위에 이미 붙어 있다.
+포털은 `/dev-login`, 관리자는 `/admin/login`으로 들어간다. 포털의 `/dev-login`은 로컬 전용
+우회이며 실제 인증(초대링크+PIN)은 세션 레이어 위에 이미 붙어 있다.
 
-### 관리자 GitHub OAuth 설정 (선택)
+### 관리자 로그인 설정
 
-GitHub → Settings → Developer settings → OAuth Apps에서 앱을 만들고
-Authorization callback URL을 `http://localhost:3000/api/auth/github/callback`으로 둔 뒤,
-`.env`에 `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` / `ADMIN_GITHUB_LOGINS`를 채운다.
-허용 목록에 없는 계정은 users 행조차 만들어지지 않는다.
+`.env`에 `ADMIN_ID`와 `ADMIN_PASSWORD`를 채우면 `/admin/login`에서 그 한 쌍으로 들어간다.
+둘 중 하나라도 비어 있으면 로그인 화면이 열리지 않는다. 자격증명을 통과하기 전에는
+`users` 행이 만들어지지 않는다.
 
 ## 도그푸딩 — ticketree로 ticketree를 개발한다
 
