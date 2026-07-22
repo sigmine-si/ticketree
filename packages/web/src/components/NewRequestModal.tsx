@@ -141,7 +141,7 @@ export function NewRequestModal({ onClose }: { onClose: () => void }) {
           <>
             <h3>새 요청</h3>
             <p className="msub">
-              편하게 적어주세요 — 보내면 코드를 확인하면서 이 자리에서 몇 가지 여쭤볼게요
+              편하게 적어주세요 — 보내면 이 자리에서 몇 가지 여쭤보고 내용을 확정할게요
             </p>
 
             <div className="mfield">
@@ -198,7 +198,7 @@ export function NewRequestModal({ onClose }: { onClose: () => void }) {
 
             <div className="mfoot">
               <span className="hint">
-                보내면 코드를 확인하고
+                보내면 내용을 살펴보고
                 <br />
                 필요한 것만 바로 여쭤봐요
               </span>
@@ -213,7 +213,7 @@ export function NewRequestModal({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <h3>요청 확인</h3>
-            <p className="msub">코드를 확인하며 내용을 확정하고 있어요</p>
+            <p className="msub">몇 가지 여쭤보고 내용을 확정할게요</p>
 
             <div className="chat" ref={chatRef}>
               <div className="msg user">

@@ -90,8 +90,8 @@ export const FLAG_CLIENT_NOTE: Partial<Record<RequestFlag, string>> = {
 export const STATUS_CLIENT_NOTE: Record<RequestStatus, string> = {
   draft: '',
   submitted: '요청을 접수했어요',
-  queued_exploration: '곧 코드를 확인할게요',
-  exploring: '코드를 확인하고 있어요 — 잠시 후 질문 또는 견적이 도착합니다',
+  queued_exploration: '곧 확인을 시작할게요',
+  exploring: '요청 내용을 확정하기 위해 살펴보고 있어요 — 잠시 후 질문 또는 견적이 도착합니다',
   awaiting_client: '확인 질문이 도착했어요',
   estimating: '답변을 반영해 확정 견적을 계산하고 있어요',
   quote_ready: '견적이 확정 대기 중이에요 — 승인하면 개발이 시작됩니다',
