@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
 import { costRatio, formatKrw, usdToKrw } from '@ticketree/shared/money'
 import { getSession } from '@/lib/session'
-import { ledger, listQueue } from '@/lib/admin'
+import { ledger, listQueue, noticeItems } from '@/lib/admin'
 import { AdminTopBar } from '@/components/AdminTopBar'
 import { AdminQueue } from '@/components/AdminQueue'
+import { NewProject } from '@/components/NewProject'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,18 +12,19 @@ export default async function AdminHome() {
   const session = await getSession()
   if (session?.kind !== 'admin') redirect('/admin/login')
 
-  const [rows, l] = await Promise.all([listQueue(), ledger()])
+  const [rows, l, notices] = await Promise.all([listQueue(), ledger(), noticeItems()])
   const pending = rows.filter((r) => ['answer', 'spec', 'deploy'].includes(r.decision)).length
 
   return (
     <>
-      <AdminTopBar userName={session.name} running={l.running} queued={l.queued} />
+      <AdminTopBar userName={session.name} running={l.running} queued={l.queued} notices={notices} />
       <main className="wrap admin">
         <div className="page-head">
           <div>
             <h1>검토 큐</h1>
             <p className="sub">내 결정을 기다리는 순서대로 정렬되어 있어요</p>
           </div>
+          <NewProject />
         </div>
 
         <div className="ledger four">

@@ -9,6 +9,9 @@
  * 바뀌지만 이 파일 밖은 그 차이를 모른다.
  */
 import { execFile } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { mkdir } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 
 const exec = promisify(execFile)
@@ -136,6 +139,18 @@ export async function syncMain(cwd: string): Promise<void> {
   await git(cwd, 'fetch', 'origin', 'main')
   await git(cwd, 'checkout', 'main')
   await git(cwd, 'reset', '--hard', 'origin/main')
+}
+
+/**
+ * 워크스페이스가 없으면 복제한다. 온보딩은 이 저장소를 처음 보는 시점이라
+ * 클론부터가 job의 일부다 (§12).
+ */
+export async function ensureClone(repoFullName: string, path: string): Promise<void> {
+  if (existsSync(join(path, '.git'))) return
+  await mkdir(dirname(path), { recursive: true })
+  await exec('git', ['clone', `https://github.com/${repoFullName}.git`, path], {
+    maxBuffer: 20 * 1024 * 1024,
+  })
 }
 
 /**

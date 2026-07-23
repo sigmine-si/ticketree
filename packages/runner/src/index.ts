@@ -7,7 +7,14 @@
 import { randomUUID } from 'node:crypto'
 import { changeRequests, closeDb, createDb, createPool, logEvent, pendingNotices } from '@ticketree/shared'
 import { eq } from 'drizzle-orm'
-import { claimJob, finishJob, requeueJob, type ClaimedJob } from './queue.js'
+import {
+  claimJob,
+  finishJob,
+  reclaimStaleJobs,
+  requeueJob,
+  touchJobs,
+  type ClaimedJob,
+} from './queue.js'
 import { runIntakeJob } from './jobs/intake.js'
 import { runEstimationJob } from './jobs/estimation.js'
 import { runSpecDraftJob } from './jobs/spec-draft.js'
@@ -15,8 +22,13 @@ import { runSpecMergeJob } from './jobs/spec-merge.js'
 import { runImplementationJob } from './jobs/implementation.js'
 import { runDeployJob } from './jobs/deploy.js'
 import { runDeployFinalizeJob } from './jobs/deploy-finalize.js'
+import { runOnboardingJob } from './jobs/onboarding.js'
 
 const RUNNER_ID = `runner-${process.pid}-${randomUUID().slice(0, 8)}`
+/** 하트비트 주기. 회수 기준의 1/4보다 짧아야 살아 있는 job이 회수되지 않는다. */
+const HEARTBEAT_MS = 20_000
+/** 이 시간 넘게 심장이 안 뛴 job은 러너가 끊긴 것으로 본다. */
+const STALE_AFTER_MS = 90_000
 const POLL_INTERVAL_MS = Number(process.env.RUNNER_POLL_MS ?? 2000)
 const MAX_CONCURRENT = Number(process.env.RUNNER_MAX_CONCURRENT ?? 2)
 /** 1회 자동 재시도 후 에스컬레이션 (§7) */
@@ -71,6 +83,8 @@ async function dispatch(job: ClaimedJob): Promise<void> {
       return void (await finishJob(db, job.id, await runDeployJob(db, job)))
     case 'deploy_finalize':
       return void (await finishJob(db, job.id, await runDeployFinalizeJob(db, job)))
+    case 'onboarding':
+      return void (await finishJob(db, job.id, await runOnboardingJob(db, job)))
     default:
       throw new Error(`job kind '${job.kind}' is not implemented yet`)
   }
@@ -104,18 +118,40 @@ async function handle(job: ClaimedJob): Promise<void> {
   }
 }
 
+/** 실행 중인 job들의 심장을 찍고, 끊긴 job은 큐로 되돌린다. */
+const inFlightIds = new Set<string>()
+
+async function heartbeat(): Promise<void> {
+  await touchJobs(db, [...inFlightIds]).catch(() => {})
+  // 내 것이든 남의 것이든, 심장이 멈춘 job은 되돌린다. 하트비트가 판단 기준이라
+  // 러너가 여럿이어도 살아 있는 job을 뺏지 않는다.
+  const reclaimed = await reclaimStaleJobs(db, STALE_AFTER_MS).catch(() => [] as string[])
+  if (reclaimed.length > 0) log('jobs.reclaimed', { count: reclaimed.length, ids: reclaimed })
+}
+
 async function tick(): Promise<void> {
   while (!draining && inFlight.size < MAX_CONCURRENT) {
     const job = await claimJob(db, pool, RUNNER_ID)
     if (!job) return
 
-    const p = handle(job).finally(() => inFlight.delete(p))
+    inFlightIds.add(job.id)
+    const p = handle(job).finally(() => {
+      inFlight.delete(p)
+      inFlightIds.delete(job.id)
+    })
     inFlight.add(p)
   }
 }
 
 async function main(): Promise<void> {
   log('runner.start', { maxConcurrent: MAX_CONCURRENT, pollMs: POLL_INTERVAL_MS })
+
+  // 시작할 때 한 번 쓸어담는다. 기준은 평소와 같다 — 0으로 하면 다른 러너가
+  // 지금 돌리는 중인 job까지 뺏는다.
+  const orphans = await reclaimStaleJobs(db, STALE_AFTER_MS).catch(() => [] as string[])
+  if (orphans.length > 0) log('jobs.reclaimed.onstart', { count: orphans.length, ids: orphans })
+
+  const beat = setInterval(() => void heartbeat(), HEARTBEAT_MS)
 
   while (!draining) {
     try {
@@ -127,6 +163,7 @@ async function main(): Promise<void> {
   }
 
   // 드레인: 새 job은 안 집고 진행분만 마친다 (§6)
+  clearInterval(beat)
   log('runner.draining', { inFlight: inFlight.size })
   await Promise.allSettled([...inFlight])
   await closeDb()
