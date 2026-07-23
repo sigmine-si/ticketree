@@ -35,6 +35,19 @@ export interface HistoryEntry {
 }
 
 /**
+ * 섹션 본문의 덩어리.
+ *
+ * 줄 단위로 다루면 문단이 줄바꿈마다 쪼개지고 표가 파이프 문자로 찍힌다.
+ * 제품 정의처럼 문단과 표로 쓰는 문서에서 바로 드러났다.
+ */
+export type SpecBlock =
+  | { kind: 'para'; text: string }
+  | { kind: 'list'; items: string[] }
+  | { kind: 'table'; head: string[]; rows: string[][] }
+  | { kind: 'code'; text: string }
+  | { kind: 'heading'; text: string }
+
+/**
  * "이렇게 동작해요"·"변경 이력" 밖의 섹션. 알려진 제약, 구현 규칙 등이 여기 들어온다.
  *
  * 계약(클라이언트가 승인하는 문장)과 설계(우리가 지키는 규칙)를 한 파일에 둔다.
@@ -43,9 +56,99 @@ export interface HistoryEntry {
  */
 export interface SpecSection {
   title: string
-  items: string[]
+  blocks: SpecBlock[]
   /** true면 클라이언트 화면에 내보내지 않는다. 관리자는 명세 PR의 diff로 본다. */
   internal: boolean
+}
+
+/** 검색용 평문. 블록 구조를 모르는 곳(검색 haystack)에서 쓴다. */
+export function sectionText(sec: SpecSection): string {
+  return sec.blocks
+    .map((b) =>
+      b.kind === 'list'
+        ? b.items.join(' ')
+        : b.kind === 'table'
+          ? [...b.head, ...b.rows.flat()].join(' ')
+          : b.text,
+    )
+    .join(' ')
+}
+
+const cells = (line: string): string[] =>
+  line
+    .replace(/^\||\|$/g, '')
+    .split('|')
+    .map((c) => c.trim())
+
+const isTableRow = (l: string) => l.startsWith('|') && l.includes('|', 1)
+const isSeparator = (l: string) => /^\|[\s:|-]+\|?$/.test(l)
+
+/**
+ * 줄 목록을 블록으로 묶는다. 마크다운 전부가 아니라 명세에 실제로 쓰는 것만 다룬다 —
+ * 소제목·문단·불릿·표·코드블록. 형식은 우리가 정하는 것이므로 렌더러를 들이지 않는다.
+ */
+export function toBlocks(lines: string[]): SpecBlock[] {
+  const blocks: SpecBlock[] = []
+  let para: string[] = []
+  let list: string[] = []
+
+  const flush = () => {
+    if (para.length) blocks.push({ kind: 'para', text: para.join(' ') })
+    if (list.length) blocks.push({ kind: 'list', items: [...list] })
+    para = []
+    list = []
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!
+
+    if (!line) {
+      flush()
+      continue
+    }
+
+    if (line.startsWith('```')) {
+      flush()
+      const body: string[] = []
+      i++
+      while (i < lines.length && !lines[i]!.startsWith('```')) body.push(lines[i]!), i++
+      blocks.push({ kind: 'code', text: body.join('\n') })
+      continue
+    }
+
+    if (line.startsWith('#')) {
+      flush()
+      blocks.push({ kind: 'heading', text: line.replace(/^#+\s*/, '') })
+      continue
+    }
+
+    if (isTableRow(line)) {
+      flush()
+      const head = cells(line)
+      const rows: string[][] = []
+      i++
+      if (i < lines.length && isSeparator(lines[i]!)) i++
+      while (i < lines.length && isTableRow(lines[i]!)) rows.push(cells(lines[i]!)), i++
+      i--
+      blocks.push({ kind: 'table', head, rows })
+      continue
+    }
+
+    if (/^[-*]\s/.test(line)) {
+      if (para.length) flush()
+      list.push(line.replace(/^[-*]\s*/, ''))
+      continue
+    }
+
+    // 불릿 다음의 들여쓴 줄은 그 불릿의 이어지는 문장이다
+    if (list.length) {
+      list[list.length - 1] += ` ${line}`
+      continue
+    }
+    para.push(line)
+  }
+  flush()
+  return blocks
 }
 
 /** 제목만 보고 내부 섹션인지 판정한다. 표시하지 않는 쪽이 기본값이 아니므로 명시적이어야 한다. */
@@ -125,10 +228,10 @@ export function parseSpec(slug: string, md: string, layer: SpecLayer = 'feature'
   let order: number | null = null
   const criteria: Criterion[] = []
   const history: HistoryEntry[] = []
-  const sections: SpecSection[] = []
 
   let section: 'none' | 'criteria' | 'history' | 'other' = 'none'
-  let current: SpecSection | null = null
+  let current: { title: string; internal: boolean; lines: string[] } | null = null
+  const rawSections: Array<{ title: string; internal: boolean; lines: string[] }> = []
 
   for (const raw of lines) {
     const line = raw.trim()
@@ -148,8 +251,8 @@ export function parseSpec(slug: string, md: string, layer: SpecLayer = 'feature'
       } else {
         // 모르는 섹션도 그대로 들고 간다 (알려진 제약, 구현 규칙 등)
         section = 'other'
-        current = { title: h, items: [], internal: isInternalHeading(h) }
-        sections.push(current)
+        current = { title: h, internal: isInternalHeading(h), lines: [] }
+        rawSections.push(current)
       }
       continue
     }
@@ -170,8 +273,8 @@ export function parseSpec(slug: string, md: string, layer: SpecLayer = 'feature'
     } else if (section === 'history') {
       const h = parseHistory(line)
       if (h) history.push(h)
-    } else if (section === 'other' && current && line) {
-      current.items.push(line.replace(/^[-*]\s*/, '').trim())
+    } else if (section === 'other' && current) {
+      current.lines.push(line)
     }
   }
 
@@ -183,7 +286,9 @@ export function parseSpec(slug: string, md: string, layer: SpecLayer = 'feature'
     lastChanged,
     order,
     criteria,
-    sections: sections.filter((s) => s.items.length > 0),
+    sections: rawSections
+      .map((r) => ({ title: r.title, internal: r.internal, blocks: toBlocks(r.lines) }))
+      .filter((s) => s.blocks.length > 0),
     // 최신이 위로 온다. 파일에 어떤 순서로 쌓였든 화면은 항상 최신순이다.
     history: history.sort((a, b) => compareVersion(b.version, a.version)),
     pendingReqTags: [

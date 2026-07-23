@@ -34,6 +34,9 @@ export function devBranch(reqNo: number): string {
  * 같은 이름의 브랜치가 이미 있으면 지우고 다시 딴다 — 재시도가 깨끗해야 한다.
  */
 export async function prepareBranch(cwd: string, branch: string): Promise<void> {
+  // --prune: 사라진 원격 브랜치의 추적 ref를 지운다. 남아 있으면 나중에
+  // push --force-with-lease 가 그 낡은 ref를 근거로 거부한다.
+  await git(cwd, 'fetch', '--prune', 'origin').catch(() => {})
   await git(cwd, 'fetch', 'origin', 'main')
   await git(cwd, 'checkout', 'main')
   await git(cwd, 'reset', '--hard', 'origin/main')
@@ -133,6 +136,17 @@ export async function syncMain(cwd: string): Promise<void> {
   await git(cwd, 'fetch', 'origin', 'main')
   await git(cwd, 'checkout', 'main')
   await git(cwd, 'reset', '--hard', 'origin/main')
+}
+
+/**
+ * PR을 닫는다. 머지가 아니라 폐기다 — 명세를 다시 쓸 때 옛 PR을 정리한다.
+ * 브랜치도 같이 지운다. 다음 시도가 깨끗한 브랜치에서 시작해야 한다.
+ */
+export async function closePr(cwd: string, prNumber: number, comment: string): Promise<void> {
+  await gh(cwd, 'pr', 'close', String(prNumber), '--delete-branch', '--comment', comment)
+  // 원격 브랜치가 사라졌으니 추적 ref를 정리한다. 안 하면 다음 push의
+  // --force-with-lease 가 낡은 ref를 근거로 "stale info"를 내며 거부한다.
+  await git(cwd, 'fetch', '--prune', 'origin').catch(() => {})
 }
 
 /**

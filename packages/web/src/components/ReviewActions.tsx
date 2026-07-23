@@ -38,10 +38,15 @@ export function ReviewActions({
   const [amount, setAmount] = useState(String(finalAmount ?? proposedAmount ?? ''))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** '명세 다시 쓰기'를 누르면 열리는 지침 입력. 지침 없이는 다시 써도 같은 결과다. */
+  const [redoNote, setRedoNote] = useState<string | null>(null)
 
   const parsed = Number(amount.replace(/[^\d]/g, ''))
 
-  async function decide(action: 'approve_spec' | 'request_changes' | 'reject') {
+  async function decide(
+    action: 'approve_spec' | 'redo_spec' | 'request_changes' | 'reject',
+    comment?: string,
+  ) {
     if (action === 'approve_spec' && !Number.isFinite(parsed)) {
       setError('청구 금액을 확인해주세요')
       return
@@ -53,6 +58,7 @@ export function ReviewActions({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action,
+        comment,
         finalAmount: Number.isFinite(parsed) ? parsed : undefined,
       }),
     })
@@ -126,8 +132,36 @@ export function ReviewActions({
         >
           Spec 승인 · 개발 시작
         </button>
+        <button
+          className="btn"
+          disabled={busy || prNumber === null}
+          onClick={() => setRedoNote(redoNote === null ? '' : null)}
+        >
+          명세 다시 쓰기
+        </button>
+        {redoNote !== null && (
+          <div className="redo-box">
+            <textarea
+              className="redo-input"
+              rows={4}
+              value={redoNote}
+              onChange={(e) => setRedoNote(e.target.value)}
+              placeholder="무엇이 잘못됐고 어떻게 써야 하는지 적어주세요 — 이대로 명세 담당에게 전달됩니다"
+            />
+            <button
+              className="btn btn-primary"
+              disabled={busy || !redoNote.trim()}
+              onClick={() => void decide('redo_spec', redoNote.trim())}
+            >
+              이 지침으로 다시 쓰기
+            </button>
+            <p className="approve-note">
+              지금 열린 명세 PR을 닫고 새 변경안을 만듭니다. 클라이언트에게는 되묻지 않아요.
+            </p>
+          </div>
+        )}
         <button className="btn" disabled={busy} onClick={() => void decide('request_changes')}>
-          수정 요청
+          클라이언트에게 되묻기
         </button>
         <button className="btn btn-danger" disabled={busy} onClick={() => void decide('reject')}>
           반려

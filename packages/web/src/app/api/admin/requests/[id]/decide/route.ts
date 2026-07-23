@@ -14,6 +14,7 @@ import {
   enqueueJob,
   estimates,
   logEvent,
+  messages,
   pullRequests,
   transition,
 } from '@ticketree/shared'
@@ -21,7 +22,7 @@ import { db } from '@/lib/data'
 import { requireAdmin, Unauthorized } from '@/lib/session'
 
 const bodySchema = z.object({
-  action: z.enum(['approve_spec', 'request_changes', 'reject']),
+  action: z.enum(['approve_spec', 'redo_spec', 'request_changes', 'reject']),
   /** 관리자가 조정한 청구 금액 (원) */
   finalAmount: z.number().int().nonnegative().optional(),
   comment: z.string().trim().max(2000).optional(),
@@ -98,6 +99,32 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     })
     await logEvent(db, request.id, actor, { specApproved: true, finalAmount, comment })
     return NextResponse.json({ ok: true, status: 'merging' })
+  }
+
+  if (action === 'redo_spec') {
+    // 명세가 잘못 쓰였을 때. 클라이언트에게 되돌리지 않는다 — 답변이 아니라
+    // 우리 쪽 판단이 부족했던 것이므로, 지침을 얹어 명세 담당을 다시 돌린다.
+    if (!comment) {
+      return NextResponse.json(
+        { error: '무엇을 고쳐야 하는지 적어주세요 — 그대로 다시 쓰면 같은 결과가 나옵니다' },
+        { status: 400 },
+      )
+    }
+    // 운영자 지침은 system 메시지로 남는다. spec_draft가 이걸 읽는다.
+    await db.insert(messages).values({
+      requestId: request.id,
+      role: 'system',
+      round: 0,
+      content: comment,
+    })
+    // 열려 있는 명세 PR을 닫는 것은 러너의 몫이다 — gh는 여기서 부르지 않는다 (§1)
+    await enqueueJob(db, {
+      projectId: request.projectId,
+      requestId: request.id,
+      kind: 'spec_draft',
+    })
+    await logEvent(db, request.id, actor, { redoSpec: true, comment })
+    return NextResponse.json({ ok: true, status: 'redrafting' })
   }
 
   if (action === 'request_changes') {

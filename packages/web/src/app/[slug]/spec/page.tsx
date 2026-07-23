@@ -10,11 +10,12 @@ import { redirect } from 'next/navigation'
 import { and, eq, inArray } from 'drizzle-orm'
 import { changeRequests } from '@ticketree/shared'
 import { db } from '@/lib/data'
-import { clientSections, readSpecs } from '@/lib/specs'
+import { clientSections, readSpecs, sectionText } from '@/lib/specs'
 import { requireProjectAccess } from '@/lib/scope'
 import { clientPath } from '@/lib/routes'
 import { TopBar } from '@/components/TopBar'
 import { SpecNav } from '@/components/SpecNav'
+import { InlineText, SpecBody } from '@/components/SpecBody'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,7 +87,7 @@ export default async function SpecPage({
                   s.title,
                   ...s.criteria.map((c) => c.text),
                   // 내부 섹션은 검색으로도 닿으면 안 된다
-                  ...clientSections(s).flatMap((sec) => [sec.title, ...sec.items]),
+                  ...clientSections(s).map((sec) => `${sec.title} ${sectionText(sec)}`),
                 ].join(' '),
               }))}
             />
@@ -153,7 +154,7 @@ export default async function SpecPage({
                           </svg>
                         )}
                         <span>
-                          {c.text}
+                          <InlineText text={c.text} />
                           {c.mark === 'pending' && c.reqTag && (
                             <span className="tag">예정 · {c.reqTag}</span>
                           )}
@@ -165,16 +166,9 @@ export default async function SpecPage({
 
                   {/* 알려진 제약 등 — 파일에 있는데 화면에 없으면 계약서가 아니다 */}
                   {clientSections(current).map((sec) => (
-                    <div className="card crit-card note-card" key={sec.title}>
+                    <div className="card note-card" key={sec.title}>
                       <p className="ch">{sec.title}</p>
-                      {sec.items.map((item, i) => (
-                        <div className="crit plain" key={i}>
-                          <svg viewBox="0 0 24 24" fill="none" strokeWidth="2.2">
-                            <circle cx="12" cy="12" r="3.5" />
-                          </svg>
-                          <span>{item}</span>
-                        </div>
-                      ))}
+                      <SpecBody blocks={sec.blocks} />
                     </div>
                   ))}
 
@@ -187,7 +181,7 @@ export default async function SpecPage({
                         <div className="hist-item" key={i}>
                           <span className="hv">{h.version}</span>
                           <span>
-                            {h.text}
+                            <InlineText text={h.text} />
                             {/* 날짜가 없는 옛 문서는, 최신 줄에 한해 문서의 마지막 변경일을 쓴다 */}
                             {(h.date ?? (i === 0 ? current.lastChanged : null)) && (
                               <span className="hd">
