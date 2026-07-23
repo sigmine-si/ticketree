@@ -233,6 +233,12 @@ export const jobs = pgTable(
     error: text('error'),
     queuedAt: timestamp('queued_at', { withTimezone: true }).notNull().defaultNow(),
     startedAt: timestamp('started_at', { withTimezone: true }),
+    /**
+     * 실행 중인 러너가 살아 있다는 신호. 러너가 죽거나 재시작하면 여기서 멈춘다.
+     * 이게 없으면 job이 running 인 채로 영원히 남아 아무도 줍지 않는다 —
+     * tsx watch 재시작만으로도 실제로 두 번 일어났다.
+     */
+    heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
   },
   (t) => [

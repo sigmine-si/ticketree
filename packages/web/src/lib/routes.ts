@@ -22,4 +22,6 @@ export const adminPath = {
   request: (slug: string, id: string) => `/admin/${slug}/requests/${id}`,
   /** 고객 계정 — 초대 링크·PIN 발급 */
   invites: '/admin/invites',
+  /** 원가 — 요청별·job별 실제 소요와 환산 원가 (§8) */
+  costs: '/admin/costs',
 }

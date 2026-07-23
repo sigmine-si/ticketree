@@ -4,7 +4,7 @@
  * 메인은 현황판이 아니라 결정 큐다. 그래서 이 파일의 중심 개념은 status가 아니라
  * "지금 사람이 내려야 하는 결정"이다.
  */
-import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import {
   changeRequests,
   estimates,
@@ -19,6 +19,7 @@ import {
   type RequestStatus,
   migrateCommandOf,
   needsMigration,
+  pendingNotices,
 } from '@ticketree/shared'
 import { db } from './data'
 import { decisionOf, DECISION_ORDER, type Decision } from './decision'
@@ -150,6 +151,142 @@ function adminNote(
 }
 
 /** 상단 상시 표시 지표 — §5 */
+export interface NoticeRow {
+  id: string
+  type: string
+  createdAt: Date
+  reqNo: number | null
+  title: string | null
+  projectSlug: string
+  projectName: string
+  requestId: string
+}
+
+/** 알림 문구 — 타입 하나에 문장 하나. 화면이 문자열을 조립하지 않는다. */
+export const NOTICE_LABEL: Record<string, string> = {
+  question_arrived: '확인 질문을 보냈어요',
+  quote_ready: '견적이 나왔어요 — 클라이언트 승인 대기',
+  preview_ready: '미리보기가 준비됐어요',
+  deployed: '배포가 끝났어요',
+  manual_deploy_required: '머지됐어요 — 실제 배포가 필요해요',
+  escalated: '담당자가 막혔어요 — 답변이 필요해요',
+  job_failed: '작업이 실패했어요',
+}
+
+/**
+ * 아직 안 읽은 알림. 지금까지 pending_notices 는 쌓기만 하고 읽는 곳이 없었다 —
+ * 관리자가 큐를 직접 새로고침해야 무슨 일이 일어났는지 알 수 있었다.
+ */
+export async function pendingNoticeList(limit = 30): Promise<NoticeRow[]> {
+  const rows = await db
+    .select({
+      id: pendingNotices.id,
+      type: pendingNotices.type,
+      createdAt: pendingNotices.createdAt,
+      requestId: pendingNotices.requestId,
+      reqNo: changeRequests.reqNo,
+      title: changeRequests.title,
+      projectSlug: projects.slug,
+      projectName: projects.name,
+    })
+    .from(pendingNotices)
+    .innerJoin(changeRequests, eq(changeRequests.id, pendingNotices.requestId))
+    .innerJoin(projects, eq(projects.id, changeRequests.projectId))
+    .where(isNull(pendingNotices.dismissedAt))
+    .orderBy(desc(pendingNotices.createdAt))
+    .limit(limit)
+  return rows
+}
+
+/** 클라이언트 컴포넌트로 넘길 형태 — Date는 경계를 넘지 않는다. */
+export async function noticeItems() {
+  return (await pendingNoticeList()).map((n) => ({
+    id: n.id,
+    type: n.type,
+    label: NOTICE_LABEL[n.type] ?? '새 알림',
+    createdAt: n.createdAt.toISOString(),
+    reqNo: n.reqNo,
+    title: n.title,
+    projectSlug: n.projectSlug,
+    projectName: n.projectName,
+  }))
+}
+
+export async function dismissNotices(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  await db
+    .update(pendingNotices)
+    .set({ dismissedAt: new Date() })
+    .where(inArray(pendingNotices.id, ids))
+}
+
+export interface CostRow {
+  requestId: string
+  reqNo: number | null
+  title: string | null
+  status: string
+  projectSlug: string
+  projectName: string
+  /** 확정 견적(원). 관리자가 조정했으면 그 값이다. */
+  billed: number | null
+  costUsd: number
+  tokens: number
+  jobCount: number
+  seconds: number
+}
+
+/**
+ * 요청별 원가 — 견적 대비 실제가 어땠는지를 보는 곳 (§8).
+ * 이 표가 견적 보정의 데이터 자산이다. 모델은 만들지 않고 데이터만 쌓는다.
+ */
+export async function costByRequest(limit = 100): Promise<CostRow[]> {
+  const rows = await db
+    .select({
+      requestId: changeRequests.id,
+      reqNo: changeRequests.reqNo,
+      title: changeRequests.title,
+      status: changeRequests.status,
+      projectSlug: projects.slug,
+      projectName: projects.name,
+      billed: sql<number | null>`max(coalesce(${estimates.finalAmount}, ${estimates.proposedAmount}))`,
+      costUsd: sql<number>`coalesce(sum(${jobs.costUsd}), 0)::float`,
+      tokens: sql<number>`coalesce(sum(${jobs.tokensIn} + ${jobs.tokensOut}), 0)::bigint`,
+      jobCount: sql<number>`count(distinct ${jobs.id})::int`,
+      seconds: sql<number>`coalesce(sum(extract(epoch from (${jobs.finishedAt} - ${jobs.startedAt}))), 0)::float`,
+    })
+    .from(changeRequests)
+    .innerJoin(projects, eq(projects.id, changeRequests.projectId))
+    .leftJoin(jobs, eq(jobs.requestId, changeRequests.id))
+    .leftJoin(estimates, eq(estimates.requestId, changeRequests.id))
+    .groupBy(
+      changeRequests.id,
+      changeRequests.reqNo,
+      changeRequests.title,
+      changeRequests.status,
+      projects.slug,
+      projects.name,
+    )
+    .orderBy(desc(sql`coalesce(sum(${jobs.costUsd}), 0)`))
+    .limit(limit)
+  return rows.map((r) => ({ ...r, tokens: Number(r.tokens), billed: r.billed === null ? null : Number(r.billed) }))
+}
+
+/** job 종류별 집계 — 어느 단계가 비싼지 (§8 모델 선택이 원가를 지배한다) */
+export async function costByKind() {
+  return db
+    .select({
+      kind: jobs.kind,
+      n: sql<number>`count(*)::int`,
+      costUsd: sql<number>`coalesce(sum(${jobs.costUsd}), 0)::float`,
+      avgSeconds: sql<number>`coalesce(avg(extract(epoch from (${jobs.finishedAt} - ${jobs.startedAt}))), 0)::float`,
+      tokensOut: sql<number>`coalesce(sum(${jobs.tokensOut}), 0)::bigint`,
+    })
+    .from(jobs)
+    .where(isNotNull(jobs.finishedAt))
+    .groupBy(jobs.kind)
+    .orderBy(desc(sql`coalesce(sum(${jobs.costUsd}), 0)`))
+}
+
 export async function ledger() {
   const [todayCost] = await db
     .select({

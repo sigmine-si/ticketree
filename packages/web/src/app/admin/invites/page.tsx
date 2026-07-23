@@ -5,7 +5,7 @@
  */
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
-import { ledger, listClientAccounts } from '@/lib/admin'
+import { ledger, listClientAccounts, noticeItems } from '@/lib/admin'
 import { AdminTopBar } from '@/components/AdminTopBar'
 import { InviteIssuer } from '@/components/InviteIssuer'
 
@@ -15,11 +15,17 @@ export default async function AdminInvites() {
   const session = await getSession()
   if (session?.kind !== 'admin') redirect('/admin/login')
 
-  const [accounts, l] = await Promise.all([listClientAccounts(), ledger()])
+  const [accounts, l, notices] = await Promise.all([listClientAccounts(), ledger(), noticeItems()])
 
   return (
     <>
-      <AdminTopBar userName={session.name} running={l.running} queued={l.queued} current="invites" />
+      <AdminTopBar
+        userName={session.name}
+        running={l.running}
+        queued={l.queued}
+        notices={notices}
+        current="invites"
+      />
       <main className="wrap admin">
         <div className="page-head">
           <div>

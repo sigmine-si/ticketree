@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { formatKrw, usdToKrw } from '@ticketree/shared/money'
 import type { RequestFlag, RequestStatus } from '@ticketree/shared/status'
 import { getSession } from '@/lib/session'
-import { getReviewDetail, ledger } from '@/lib/admin'
+import { getReviewDetail, ledger, noticeItems } from '@/lib/admin'
 import { adminPath } from '@/lib/routes'
 import { decisionOf, DECISION_LABEL } from '@/lib/decision'
 import { AdminTopBar } from '@/components/AdminTopBar'
@@ -23,7 +23,7 @@ export default async function ReviewPage({
   if (session?.kind !== 'admin') redirect('/admin/login')
 
   const { slug, id } = await params
-  const [detail, l] = await Promise.all([getReviewDetail(id), ledger()])
+  const [detail, l, notices] = await Promise.all([getReviewDetail(id), ledger(), noticeItems()])
   if (!detail) notFound()
   // 주소의 프로젝트와 요청의 프로젝트가 어긋나면 없는 주소다 — 잘못된 링크가
   // 그럴듯한 화면을 띄우면 어느 프로젝트 건인지 착각한 채 승인하게 된다
@@ -38,7 +38,7 @@ export default async function ReviewPage({
 
   return (
     <>
-      <AdminTopBar userName={session.name} running={l.running} queued={l.queued} />
+      <AdminTopBar userName={session.name} running={l.running} queued={l.queued} notices={notices} />
       <main className="wrap admin">
         <Link className="back" href={adminPath.queue}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

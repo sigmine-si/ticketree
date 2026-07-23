@@ -9,7 +9,7 @@
  * 전용 커넥션에 세션 락을 잡고, job이 끝나면 명시적으로 푼다.
  */
 import type pg from 'pg'
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, lt, or } from 'drizzle-orm'
 import type { Db, JobKind, JobStatus, Lane } from '@ticketree/shared'
 import { jobs } from '@ticketree/shared'
 
@@ -79,6 +79,7 @@ export async function claimJob(
           status: 'running',
           claimedBy: runnerId,
           startedAt: new Date(),
+          heartbeatAt: new Date(),
           attempt: c.attempt + 1,
         })
         .where(and(eq(jobs.id, c.id), eq(jobs.status, 'queued')))
@@ -128,6 +129,45 @@ export async function claimJob(
   return null
 }
 
+/**
+ * 실행 중인 job이 살아 있다는 신호를 남긴다. job 하나가 수 분 걸리고 그동안
+ * DB를 안 건드릴 수 있으므로, 러너 루프가 주기적으로 이걸 찍는다.
+ */
+export async function touchJobs(db: Db, jobIds: string[]): Promise<void> {
+  if (jobIds.length === 0) return
+  await db.update(jobs).set({ heartbeatAt: new Date() }).where(inArray(jobs.id, jobIds))
+}
+
+/**
+ * 심장이 멈춘 job을 큐로 되돌린다 — 러너가 죽거나 재시작하면 job이 running 인 채
+ * 남는다. 되돌리기만 하고 attempt는 건드리지 않는다(클레임할 때 오른다).
+ *
+ * 되돌린 job은 처음부터 다시 돈다. 에이전트 job은 부수효과가 워크스페이스에만
+ * 있고 러너가 브랜치를 다시 따므로 재실행이 안전하다.
+ */
+export async function reclaimStaleJobs(db: Db, staleAfterMs: number): Promise<string[]> {
+  const cutoff = new Date(Date.now() - staleAfterMs)
+  const rows = await db
+    .update(jobs)
+    .set({
+      status: 'queued',
+      claimedBy: null,
+      startedAt: null,
+      heartbeatAt: null,
+      statusText: null,
+      error: '러너가 끊겨 다시 큐에 넣었습니다',
+    })
+    .where(
+      and(
+        eq(jobs.status, 'running'),
+        // heartbeat가 없는 옛 행도 startedAt 기준으로 함께 회수한다
+        or(lt(jobs.heartbeatAt, cutoff), and(isNull(jobs.heartbeatAt), lt(jobs.startedAt, cutoff))),
+      ),
+    )
+    .returning({ id: jobs.id })
+  return rows.map((r) => r.id)
+}
+
 /** 버퍼링 상태 문구 갱신 — SSE가 이 컬럼을 릴레이한다 (§2). */
 export async function setStatusText(db: Db, jobId: string, text: string): Promise<void> {
   await db.update(jobs).set({ statusText: text }).where(eq(jobs.id, jobId))
@@ -164,6 +204,13 @@ export async function finishJob(db: Db, jobId: string, outcome: JobOutcome): Pro
 export async function requeueJob(db: Db, jobId: string, error: string): Promise<void> {
   await db
     .update(jobs)
-    .set({ status: 'queued', claimedBy: null, startedAt: null, error, statusText: null })
+    .set({
+      status: 'queued',
+      claimedBy: null,
+      startedAt: null,
+      heartbeatAt: null,
+      error,
+      statusText: null,
+    })
     .where(eq(jobs.id, jobId))
 }
