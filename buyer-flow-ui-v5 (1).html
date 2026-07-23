@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>구매자 플로우 UI v5 — 조합안</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root{
+    --teal:#008081;
+    --teal-deep:#005B5C;
+    --teal-ink:#083A3B;
+    --teal-dd:#013D3E;
+    --off:#F8F9FA;
+    --mint:#E6F2F2;
+    --coral:#FF6B6B;
+    --coral-deep:#F04E4E;
+    --ink:#122222;
+    --sub:#6B7F7F;
+    --faint:#9DB0B0;
+    --line:#E4ECEC;
+    --white:#fff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{-webkit-font-smoothing:antialiased;}
+  body{
+    font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(0,128,129,.10), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(255,107,107,.07), transparent 55%),
+      var(--off);
+    color:var(--ink);
+    padding:48px 32px 96px;
+    letter-spacing:-.01em;
+  }
+  svg{display:block;}
+
+  .head{max-width:1400px;margin:0 auto 36px;}
+  .head .eb{font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--teal);}
+  .head h1{font-size:26px;font-weight:800;margin-top:10px;letter-spacing:-.02em;}
+  .head p{font-size:13.5px;color:var(--sub);margin-top:8px;line-height:1.6;}
+  .head p b{color:var(--teal-deep);font-weight:800;}
+
+  .grid{
+    display:flex;gap:40px;align-items:flex-start;
+    overflow-x:auto;overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory;
+    padding:8px 32px 36px;margin:0 -32px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .grid > .col{flex:0 0 390px;width:390px;scroll-snap-align:center;}
+  .grid::-webkit-scrollbar{height:8px;}
+  .grid::-webkit-scrollbar-track{background:transparent;}
+  .grid::-webkit-scrollbar-thumb{background:#C5D8D8;border-radius:999px;}
+  .grid::-webkit-scrollbar-thumb:hover{background:var(--teal);}
+  .grid{scrollbar-width:thin;scrollbar-color:#C5D8D8 transparent;}
+
+  .col-label{display:flex;align-items:baseline;gap:10px;margin:0 0 18px 6px;}
+  .col-label .n{font-size:13px;font-weight:800;color:var(--coral);letter-spacing:.02em;}
+  .col-label .t{font-size:15px;font-weight:800;letter-spacing:-.02em;color:var(--teal-ink);}
+  .col-label .d{font-size:12px;color:var(--faint);font-weight:600;}
+  .mix-note{font-size:11.5px;color:var(--sub);margin-top:14px;line-height:1.65;padding:0 6px;}
+  .mix-note b{color:var(--ink);font-weight:700;}
+
+  /* ============ phone ============ */
+  .phone{
+    width:100%;max-width:390px;margin:0 auto;
+    background:#0C1A1A;border-radius:46px;padding:10px;
+    box-shadow:0 30px 60px -20px rgba(8,58,59,.35), 0 2px 0 rgba(255,255,255,.6) inset;
+  }
+  .scr{background:var(--off);border-radius:37px;overflow:hidden;position:relative;}
+  .notch{
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    width:110px;height:26px;background:#0C1A1A;border-radius:999px;z-index:50;
+  }
+  .status{
+    height:48px;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 26px 4px;font-size:12.5px;font-weight:700;
+  }
+  .status.on-teal{color:#fff;}
+  .sig{display:flex;gap:4px;align-items:center;}
+  .sig i{display:block;width:14px;height:9px;border-radius:2px;background:currentColor;opacity:.9;}
+  .sig i.b{width:20px;height:10px;border-radius:3px;border:1px solid currentColor;background:transparent;position:relative;}
+  .sig i.b::after{content:"";position:absolute;inset:1.5px;right:5px;background:currentColor;border-radius:1px;}
+
+  /* photo stand-ins */
+  .ph{background-size:cover;background-position:center;position:relative;overflow:hidden;}
+  .ph::after{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(255,255,255,.14),transparent 45%);}
+  .ph-1{background:linear-gradient(135deg,#8A6A4F,#5E4632 55%,#463322);}
+  .ph-2{background:linear-gradient(135deg,#7D93A8,#4E657C 60%,#33465A);}
+  .ph-3{background:linear-gradient(135deg,#B0483F,#7E2F2A 60%,#5A1F1C);}
+  .ph-4{background:linear-gradient(135deg,#5E7D6C,#3C5A4A 60%,#27402F);}
+  .ph-5{background:linear-gradient(135deg,#C9B79C,#9C8664 60%,#77644A);}
+
+  /* ============ SCREEN 1 · HOME (2번 베이스 + 1번 라이브 배너) ============ */
+  .hero{
+    background:
+      radial-gradient(120% 90% at 85% -10%,#0FA3A4 0%,transparent 55%),
+      linear-gradient(165deg,var(--teal) 0%,var(--teal-deep) 60%,var(--teal-dd) 100%);
+    padding:0 22px 46px;position:relative;
+  }
+  .hero::after{content:"";position:absolute;inset:0;background:
+    repeating-linear-gradient(115deg,rgba(255,255,255,.035) 0 2px,transparent 2px 14px);pointer-events:none;}
+  .hero .status{margin:0 -22px;position:relative;z-index:2;}
+  .h-top{display:flex;align-items:center;justify-content:space-between;padding:8px 0 0;position:relative;z-index:2;}
+  .wordmark{font-size:19px;font-weight:900;letter-spacing:-.03em;color:#fff;}
+  .wordmark i{font-style:normal;color:#7BE0E0;}
+  .prof{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.45);background:linear-gradient(135deg,#CFE8E8,#8CC7C7);}
+  .h-copy{margin-top:20px;position:relative;z-index:2;color:#fff;}
+  .h-copy h2{font-size:23px;font-weight:800;line-height:1.32;letter-spacing:-.025em;}
+  .h-copy p{font-size:12.5px;margin-top:8px;color:rgba(255,255,255,.75);line-height:1.5;}
+  .h-cta{
+    margin-top:18px;background:#fff;color:var(--teal-deep);border-radius:14px;height:52px;
+    display:flex;align-items:center;padding:0 16px;gap:12px;
+    box-shadow:0 12px 28px -10px rgba(0,0,0,.35);position:relative;z-index:2;
+  }
+  .cam{width:30px;height:30px;border-radius:9px;background:var(--mint);display:flex;align-items:center;justify-content:center;flex:none;}
+  .cam svg{width:16px;height:16px;stroke:var(--teal);fill:none;stroke-width:2;}
+  .h-cta .tt{font-size:14px;font-weight:800;}
+  .h-cta .dd{font-size:10.5px;color:var(--sub);font-weight:500;margin-top:1px;}
+  .h-cta .arr{margin-left:auto;color:var(--faint);font-weight:700;}
+
+  .sheet{
+    background:var(--off);border-radius:26px 26px 0 0;margin-top:-26px;
+    padding:20px 18px 6px;position:relative;z-index:5;
+    box-shadow:0 -12px 30px -18px rgba(1,61,62,.3);
+  }
+  .sec{display:flex;align-items:baseline;justify-content:space-between;margin:0 4px 12px;}
+  .sec .t{font-size:15.5px;font-weight:800;letter-spacing:-.02em;}
+  .sec .t small{font-size:12px;color:var(--coral-deep);font-weight:800;margin-left:6px;}
+  .sec .m{font-size:11.5px;color:var(--faint);font-weight:600;}
+  .sec a{font-size:12px;color:var(--sub);font-weight:700;text-decoration:none;display:flex;align-items:center;gap:2px;}
+
+  /* ── 1번에서 가져온 라이브 배너 ── */
+  .feature{
+    border-radius:20px;overflow:hidden;position:relative;margin-bottom:12px;
+    box-shadow:0 16px 36px -16px rgba(8,58,59,.3);
+  }
+  .scene{
+    height:158px;position:relative;
+    background:
+      radial-gradient(220px 140px at 82% 18%, rgba(255,107,107,.28), transparent 65%),
+      linear-gradient(150deg,#0D4647 0%,#008081 60%,#0A6E6F 100%);
+  }
+  .scene svg{position:absolute;inset:0;width:100%;height:100%;}
+  .feature .ov{
+    position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(6,30,30,.05) 30%,rgba(6,30,30,.82) 100%);
+  }
+  .live-pill{
+    position:absolute;top:13px;left:13px;
+    display:flex;align-items:center;gap:6px;background:var(--coral);color:#fff;
+    font-size:11px;font-weight:800;letter-spacing:.08em;padding:6px 11px;border-radius:999px;
+    box-shadow:0 6px 14px rgba(240,78,78,.45);
+  }
+  .live-pill i{width:6px;height:6px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  .viewers{
+    position:absolute;top:13px;right:13px;font-size:11px;font-weight:700;color:#fff;
+    background:rgba(6,30,30,.5);backdrop-filter:blur(4px);padding:6px 10px;border-radius:999px;
+  }
+  .feature .info{position:absolute;left:15px;right:15px;bottom:13px;display:flex;align-items:center;gap:11px;}
+  .feature .pfp{width:44px;height:44px;border-radius:50%;flex:none;border:2px solid #fff;}
+  .feature .who{flex:1;color:#fff;min-width:0;}
+  .feature .who b{font-size:15px;font-weight:800;letter-spacing:-.01em;display:block;}
+  .feature .who span{font-size:11.5px;opacity:.75;font-weight:600;}
+  .feature .enter{
+    background:#fff;color:var(--teal-ink);font-size:12.5px;font-weight:800;
+    padding:10px 16px;border-radius:12px;border:0;letter-spacing:-.01em;flex:none;
+  }
+  .ev-line{
+    display:flex;align-items:center;gap:8px;margin:0 4px 18px;
+    font-size:11.5px;font-weight:700;color:var(--coral-deep);
+  }
+  .ev-line .b{
+    font-size:10px;background:var(--coral);color:#fff;font-weight:800;
+    padding:3px 8px;border-radius:6px;letter-spacing:.02em;flex:none;
+  }
+
+  /* ── 2번 베이스의 셀러 카드 ── */
+  .s-card{
+    display:flex;align-items:center;gap:13px;background:var(--white);border-radius:16px;
+    padding:13px 14px;margin-bottom:9px;
+    box-shadow:0 1px 3px rgba(18,33,31,.05),0 6px 18px -12px rgba(18,33,31,.12);
+  }
+  .s-av{width:48px;height:48px;border-radius:16px;flex:none;}
+  .s-in{flex:1;min-width:0;}
+  .s-nm{font-size:14px;font-weight:800;display:flex;align-items:center;gap:7px;letter-spacing:-.015em;}
+  .s-ds{font-size:11.5px;color:var(--sub);margin-top:4px;}
+  .s-go{width:28px;height:28px;border-radius:50%;background:var(--off);display:flex;align-items:center;justify-content:center;color:var(--faint);flex:none;}
+  .chip{
+    display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;
+    padding:3.5px 8px;border-radius:6px;letter-spacing:.02em;
+  }
+  .chip-live{background:var(--coral);color:#fff;}
+  .chip-live .dot{width:5px;height:5px;border-radius:50%;background:#fff;animation:blink 1.2s infinite;}
+  .chip-ev{background:var(--mint);color:var(--teal-deep);}
+
+  .tabs{display:flex;background:var(--white);border-top:1px solid var(--line);padding:10px 10px 22px;margin-top:8px;}
+  .tabs > div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;font-weight:700;color:var(--faint);}
+  .tabs .on{color:var(--teal);}
+  .tabs .tcam{
+    width:46px;height:46px;margin-top:-28px;border-radius:50%;background:var(--coral);
+    display:flex;align-items:center;justify-content:center;color:#fff;
+    box-shadow:0 10px 22px -6px rgba(240,78,78,.55);border:3px solid var(--off);
+  }
+
+  /* ============ SCREEN 2 · UPLOAD (1번 베이스 + 2번 대표사진 스트립) ============ */
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 14px;}
+  .nav .bk{width:36px;height:36px;border-radius:12px;background:var(--white);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .nav b{font-size:16px;font-weight:800;letter-spacing:-.02em;}
+  .nav .sp{width:36px;}
+  .s2-body{padding:0 18px 20px;}
+
+  /* ── 2번에서 가져온 셀러 대표사진 스트립 ── */
+  .ctx{
+    display:flex;align-items:center;gap:12px;background:var(--white);border:1px solid var(--line);
+    border-radius:16px;padding:12px 13px;margin-bottom:18px;
+  }
+  .ctx .s-av{width:46px;height:46px;border-radius:14px;outline:2px solid var(--coral);outline-offset:2px;}
+  .ctx .t{flex:1;min-width:0;}
+  .ctx .t .nm{font-size:13.5px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:6px;}
+  .ctx .t small{display:block;font-size:11px;color:var(--faint);font-weight:600;margin-top:3px;}
+  .ctx button{font-size:11.5px;font-weight:800;color:var(--teal);background:var(--mint);border:0;padding:8px 12px;border-radius:10px;flex:none;}
+
+  .drop{
+    border-radius:20px;background:var(--white);border:1.5px dashed #9CC7C7;
+    padding:26px 20px 24px;text-align:center;margin-bottom:20px;position:relative;overflow:hidden;
+  }
+  .drop::before{
+    content:"";position:absolute;inset:0;
+    background:radial-gradient(400px 160px at 50% -40px, rgba(0,128,129,.07), transparent);
+  }
+  .drop .di{
+    width:56px;height:56px;margin:0 auto 14px;border-radius:18px;position:relative;
+    background:linear-gradient(150deg,var(--teal),var(--teal-deep));
+    display:flex;align-items:center;justify-content:center;color:#fff;
+    box-shadow:0 10px 24px -8px rgba(0,128,129,.5);
+  }
+  .drop .di::after{
+    content:"";position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;
+    background:var(--coral);border:3px solid var(--white);
+  }
+  .drop h4{font-size:16px;font-weight:800;letter-spacing:-.02em;position:relative;}
+  .drop p{font-size:12px;color:var(--sub);line-height:1.6;margin-top:6px;position:relative;letter-spacing:-.01em;}
+  .drop .pick{
+    position:relative;margin-top:16px;background:var(--ink);color:#fff;font-size:13px;font-weight:800;
+    padding:12px 26px;border-radius:999px;border:0;letter-spacing:-.01em;
+  }
+
+  .steps{display:flex;align-items:flex-start;margin:0 6px 20px;}
+  .st{flex:1;text-align:center;position:relative;}
+  .st::before{
+    content:"";position:absolute;top:11px;left:calc(50% + 14px);right:calc(-50% + 14px);
+    height:2px;background:var(--line);border-radius:2px;
+  }
+  .st:last-child::before{display:none;}
+  .st.done::before{background:var(--teal);}
+  .st .dot{
+    width:22px;height:22px;margin:0 auto 6px;border-radius:50%;
+    background:var(--white);border:2px solid var(--line);position:relative;z-index:2;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .st.done .dot{background:var(--teal);border-color:var(--teal);color:#fff;}
+  .st.now .dot{border-color:var(--coral);}
+  .st.now .dot::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--coral);animation:blink 1.1s infinite;}
+  .st span{font-size:10px;font-weight:700;color:var(--faint);letter-spacing:-.01em;}
+  .st.done span{color:var(--teal-deep);}
+  .st.now span{color:var(--coral-deep);font-weight:800;}
+
+  .card{
+    background:var(--white);border-radius:18px;padding:14px;margin-bottom:12px;
+    box-shadow:0 8px 24px -14px rgba(8,58,59,.2);border:1px solid var(--line);
+  }
+  .card .row{display:flex;gap:13px;}
+  .thumb{width:82px;height:96px;border-radius:13px;flex:none;}
+  .phwrap{position:relative;flex:none;}
+  .phwrap .num{
+    position:absolute;top:6px;left:6px;background:rgba(12,26,26,.72);color:#fff;
+    font-size:9px;font-weight:800;padding:3px 7px;border-radius:6px;letter-spacing:.03em;z-index:2;
+  }
+  .meta{flex:1;min-width:0;padding-top:2px;}
+  .badge{
+    display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;
+    padding:4px 9px;border-radius:999px;margin-bottom:7px;letter-spacing:.01em;
+  }
+  .badge.ai{background:var(--mint);color:var(--teal-deep);}
+  .badge.wait{background:#FFF0F0;color:var(--coral-deep);}
+  .meta .nm{font-size:14.5px;font-weight:800;letter-spacing:-.02em;}
+  .meta .ds{font-size:11.5px;color:var(--sub);margin-top:3px;font-weight:600;}
+  .meta .pr{margin-top:9px;display:flex;align-items:baseline;gap:6px;}
+  .meta .pr b{font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--teal-deep);font-variant-numeric:tabular-nums;}
+  .meta .pr span{font-size:10.5px;color:var(--faint);font-weight:700;}
+  .cnote{
+    margin-top:12px;padding:10px 12px;border-radius:11px;background:var(--off);
+    font-size:11px;line-height:1.6;color:var(--sub);font-weight:600;letter-spacing:-.01em;
+  }
+  .cnote b{color:var(--coral-deep);font-weight:800;}
+  .sk{height:11px;border-radius:6px;background:linear-gradient(90deg,#EEF4F4,#E2ECEC,#EEF4F4);background-size:200% 100%;animation:sh 1.4s infinite;}
+  @keyframes sh{to{background-position:-200% 0}}
+  .spin{width:9px;height:9px;border:2px solid var(--coral);border-top-color:transparent;border-radius:50%;animation:rot .9s linear infinite;}
+  @keyframes rot{to{transform:rotate(360deg)}}
+
+  .cta{
+    width:100%;border:0;border-radius:16px;padding:16px;font-family:inherit;
+    font-size:15px;font-weight:800;letter-spacing:-.01em;
+  }
+  .cta.teal{background:var(--teal);color:#fff;box-shadow:0 14px 28px -10px rgba(0,128,129,.5);margin-top:4px;}
+  .cta.ghost{background:transparent;color:var(--sub);font-size:13px;font-weight:700;padding:13px;margin-top:2px;}
+
+  /* ============ SCREEN 3 · PAY (1번 그대로) ============ */
+  .s3-body{padding:0 18px 16px;}
+  .grade{
+    display:flex;align-items:center;gap:10px;margin-bottom:14px;
+    background:linear-gradient(120deg,var(--teal-ink),var(--teal-deep));
+    border-radius:16px;padding:13px 15px;color:#fff;
+  }
+  .grade .gb{
+    font-size:10px;font-weight:800;letter-spacing:.12em;background:rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.3);padding:5px 10px;border-radius:8px;flex:none;
+  }
+  .grade p{font-size:12.5px;font-weight:700;letter-spacing:-.01em;}
+  .grade p small{display:block;font-size:10.5px;font-weight:600;opacity:.65;margin-top:1px;}
+
+  .panel{
+    background:var(--white);border:1px solid var(--line);border-radius:18px;
+    padding:16px;margin-bottom:12px;
+  }
+  .panel > h4{
+    font-size:13px;font-weight:800;letter-spacing:-.01em;margin-bottom:13px;
+    display:flex;align-items:center;gap:7px;color:var(--teal-ink);
+  }
+  .panel > h4::before{content:"";width:3px;height:13px;border-radius:2px;background:var(--coral);}
+  .panel > h4 .r{font-size:10.5px;color:var(--faint);font-weight:700;margin-left:auto;}
+
+  .oitem{display:flex;gap:12px;align-items:center;}
+  .oitem .oimg{width:58px;height:68px;border-radius:11px;flex:none;}
+  .oitem .m{flex:1;min-width:0;}
+  .oitem .m b{font-size:13.5px;font-weight:800;letter-spacing:-.01em;display:block;}
+  .oitem .m span{font-size:11px;color:var(--sub);font-weight:600;margin-top:3px;display:inline-flex;align-items:center;gap:4px;}
+  .oitem .m span i{width:13px;height:13px;border-radius:50%;background:var(--teal);color:#fff;display:inline-flex;align-items:center;justify-content:center;}
+  .oitem .p{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+
+  .keep{
+    margin-top:13px;border-radius:14px;padding:13px 14px;
+    background:linear-gradient(120deg,#FFF4F4,#FFECEC);border:1px solid #FFD9D9;
+    display:flex;gap:12px;align-items:flex-start;
+  }
+  .keep .ki{
+    width:34px;height:34px;flex:none;border-radius:11px;background:var(--coral);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .keep .kt{flex:1;}
+  .keep .kt b{font-size:13px;font-weight:800;letter-spacing:-.01em;}
+  .keep .kt p{font-size:11px;color:#B25555;line-height:1.55;margin-top:3px;font-weight:600;letter-spacing:-.01em;}
+  .tg{width:42px;height:25px;border-radius:999px;background:var(--coral);position:relative;flex:none;margin-top:3px;}
+  .tg::after{content:"";position:absolute;top:2.5px;right:2.5px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+
+  .f{margin-bottom:10px;}
+  .f label{display:block;font-size:11px;font-weight:800;color:var(--sub);margin-bottom:6px;letter-spacing:.01em;}
+  .f label i{color:var(--coral);font-style:normal;}
+  .in{
+    background:var(--off);border:1px solid transparent;border-radius:12px;
+    padding:12px 13px;font-size:13.5px;font-weight:700;letter-spacing:-.01em;
+  }
+  .in.focus{background:#fff;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,128,129,.12);}
+  .in.empty{color:var(--faint);font-weight:500;}
+  .f2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+
+  .bill .li{display:flex;justify-content:space-between;font-size:13px;margin-bottom:9px;}
+  .bill .li span{color:var(--sub);font-weight:600;}
+  .bill .li b{font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+  .ship{
+    display:flex;gap:9px;align-items:flex-start;background:var(--mint);border-radius:11px;
+    padding:10px 12px;margin:2px 0 12px;
+  }
+  .ship svg{flex:none;margin-top:1px;}
+  .ship p{font-size:11px;color:var(--teal-deep);font-weight:700;line-height:1.55;letter-spacing:-.01em;}
+  .tot{
+    display:flex;justify-content:space-between;align-items:baseline;
+    border-top:1px dashed #CCDCDC;padding-top:13px;
+  }
+  .tot span{font-size:13px;font-weight:800;}
+  .tot b{font-size:21px;font-weight:800;letter-spacing:-.03em;color:var(--teal-deep);font-variant-numeric:tabular-nums;}
+
+  .paywrap{padding:6px 18px 24px;background:linear-gradient(180deg,transparent,var(--off) 40%);}
+  .cta.coral{background:var(--coral);color:#fff;box-shadow:0 14px 30px -10px rgba(240,78,78,.55);}
+  .agree{text-align:center;font-size:10.5px;color:var(--faint);font-weight:600;margin-top:10px;letter-spacing:-.01em;}
+  .agree u{text-decoration-color:#C9D8D8;}
+
+  .illu{display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden;}
+  .illu.jk{background:linear-gradient(165deg,#EDF6F6,#D8EAEA);}
+  .illu.dr{background:linear-gradient(165deg,#FFF3F0,#FCE4E0);}
+
+  @media(max-width:640px){
+    body{padding:24px 16px 64px;}
+    .grid{gap:24px;padding:8px 16px 32px;margin:0 -16px;}
+    .grid > .col{flex:0 0 min(390px, calc(100vw - 48px));width:auto;}
+  }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="eb">BUYER FLOW · UI v5 · 조합안</div>
+  <h1>셀러 선택 → 캡쳐 업로드 → 주문 / 결제</h1>
+  <p><b>홈</b>은 딥틸 히어로+화이트 시트 베이스에 「지금 라이브 중」 배너·입장하기 버튼을 이식 · <b>업로드</b>는 v4 베이스에 셀러 대표사진이 잘 보이는 스트립을 이식 · <b>결제</b>는 v4 그대로 유지</p>
+</div>
+
+<div class="grid">
+
+<!-- ============ 1. 홈 · 셀러 선택 ============ -->
+<div class="col">
+  <div class="col-label"><span class="n">01</span><span class="t">홈 · 셀러 선택</span><span class="d">2번 베이스 + 1번 라이브 배너</span></div>
+  <div class="phone"><div class="scr">
+    <div class="notch"></div>
+
+    <div class="hero">
+      <div class="status on-teal"><span>9:41</span><div class="sig"><i></i><i class="b"></i></div></div>
+      <div class="h-top">
+        <div class="wordmark">LIVE<i>PICK</i></div>
+        <div class="prof"></div>
+      </div>
+      <div class="h-copy">
+        <h2>방송에서 찜한 그 옷,<br>캡쳐만 올리면 끝</h2>
+        <p>AI가 상품과 가격을 찾아드려요</p>
+      </div>
+      <div class="h-cta">
+        <div class="cam"><svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h1.5l1.2-1.8A1.5 1.5 0 0 1 9 3.5h6a1.5 1.5 0 0 1 1.3.7L17.5 6H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.6"/></svg></div>
+        <div><div class="tt">캡쳐 화면 바로 업로드</div><div class="dd">라이브 스크린샷을 올려주세요</div></div>
+        <div class="arr">›</div>
+      </div>
+    </div>
+
+    <div class="sheet">
+      <div class="sec"><span class="t">지금 라이브 중<small>1</small></span><a href="#">전체 셀러 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a></div>
+
+      <div class="feature">
+        <div class="scene">
+          <svg viewBox="0 0 360 158" fill="none" preserveAspectRatio="xMidYMid slice">
+            <circle cx="316" cy="30" r="70" stroke="rgba(255,255,255,.12)"/>
+            <circle cx="316" cy="30" r="46" stroke="rgba(255,255,255,.10)"/>
+            <line x1="70" y1="40" x2="296" y2="40" stroke="rgba(255,255,255,.55)" stroke-width="4" stroke-linecap="round"/>
+            <line x1="82" y1="40" x2="82" y2="146" stroke="rgba(255,255,255,.30)" stroke-width="4" stroke-linecap="round"/>
+            <line x1="284" y1="40" x2="284" y2="146" stroke="rgba(255,255,255,.30)" stroke-width="4" stroke-linecap="round"/>
+            <g transform="translate(120,40)">
+              <path d="M0 0 v9" stroke="rgba(255,255,255,.6)" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M-17 12 h34 l5 58 a4 4 0 0 1 -4 4 h-36 a4 4 0 0 1 -4 -4 z" fill="rgba(255,255,255,.16)"/>
+              <path d="M-6 12 l6 10 6 -10" stroke="rgba(255,255,255,.35)" stroke-width="2" fill="none"/>
+            </g>
+            <g transform="translate(178,40)">
+              <path d="M0 0 v9" stroke="rgba(255,255,255,.7)" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M-15 12 h30 l4 38 -6 28 h-26 l-6 -28 z" fill="#FF6B6B"/>
+              <path d="M-15 12 h30 l2 19 h-34 z" fill="rgba(255,255,255,.22)"/>
+            </g>
+            <g transform="translate(236,40)">
+              <path d="M0 0 v9" stroke="rgba(255,255,255,.6)" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M-16 12 h32 l4 48 a4 4 0 0 1 -4 4 h-32 a4 4 0 0 1 -4 -4 z" fill="rgba(255,255,255,.10)"/>
+              <line x1="0" y1="16" x2="0" y2="60" stroke="rgba(255,255,255,.28)" stroke-width="2"/>
+            </g>
+          </svg>
+        </div>
+        <div class="ov"></div>
+        <div class="live-pill"><i></i>LIVE</div>
+        <div class="viewers">1,284명 시청</div>
+        <div class="info">
+          <div class="pfp ph ph-1"></div>
+          <div class="who"><b>빈티지언니</b><span>@vintage_unni · 빈티지 아우터</span></div>
+          <button class="enter">입장하기</button>
+        </div>
+      </div>
+      <div class="ev-line"><span class="b">EVENT</span>구제천국 — 한 벌만 사도 배송비 무료 · 7/31까지</div>
+
+      <div class="sec"><span class="t">셀러 둘러보기</span><span class="m">상품이 아닌 셀러로 만나요</span></div>
+
+      <div class="s-card">
+        <div class="s-av ph ph-3"></div>
+        <div class="s-in">
+          <div class="s-nm">구제천국 <span class="chip chip-ev">무배 이벤트</span></div>
+          <div class="s-ds">여성복 · ~7/31 한 벌도 배송비 무료</div>
+        </div>
+        <div class="s-go">›</div>
+      </div>
+
+      <div class="s-card">
+        <div class="s-av ph ph-2"></div>
+        <div class="s-in">
+          <div class="s-nm">스트릿보물창고</div>
+          <div class="s-ds">스트릿 · 스니커즈 · 팔로워 5.1만</div>
+        </div>
+        <div class="s-go">›</div>
+      </div>
+
+      <div class="s-card">
+        <div class="s-av ph ph-4"></div>
+        <div class="s-in">
+          <div class="s-nm">아메카지클럽</div>
+          <div class="s-ds">아메카지 · 밀리터리 · 잡화</div>
+        </div>
+        <div class="s-go">›</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>홈</div>
+      <div><div class="tcam"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>업로드</div>
+      <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>주문내역</div>
+      <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>마이</div>
+    </div>
+  </div></div>
+  <div class="mix-note"><b>딥틸 히어로 + 화이트 시트</b> 구조는 그대로 두고, 시트 최상단에 <b>「지금 라이브 중」 배너와 입장하기 버튼</b>을 이식. 라이브 중인 셀러는 배너로 승격되고, 나머지 셀러는 아래 카드 리스트로 노출.</div>
+</div>
+
+<!-- ============ 2. 캡쳐 업로드 ============ -->
+<div class="col">
+  <div class="col-label"><span class="n">02</span><span class="t">캡쳐 업로드</span><span class="d">1번 베이스 + 2번 대표사진 스트립</span></div>
+  <div class="phone"><div class="scr">
+    <div class="notch"></div>
+    <div class="status"><span>9:41</span><div class="sig"><i></i><i class="b"></i></div></div>
+
+    <div class="nav">
+      <div class="bk"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></div>
+      <b>캡쳐 업로드</b>
+      <div class="sp"></div>
+    </div>
+
+    <div class="s2-body">
+      <div class="ctx">
+        <div class="s-av ph ph-1"></div>
+        <div class="t">
+          <div class="nm">빈티지언니 <span class="chip chip-live"><span class="dot"></span>LIVE</span></div>
+          <small>이 셀러의 방송 캡쳐를 올려주세요</small>
+        </div>
+        <button>셀러 변경</button>
+      </div>
+
+      <div class="drop">
+        <div class="di"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5a2 2 0 0 0-2.8 0L6 20"/></svg></div>
+        <h4>방송 캡쳐 화면을 올려주세요</h4>
+        <p>구매할 옷이 잘 보이는 캡쳐일수록<br>AI가 더 정확하게 찾아드려요 · 최대 10장</p>
+        <button class="pick">사진 선택하기</button>
+      </div>
+
+      <div class="steps">
+        <div class="st done"><div class="dot"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg></div><span>업로드</span></div>
+        <div class="st now"><div class="dot"></div><span>AI 판단</span></div>
+        <div class="st"><div class="dot"></div><span>관리자 승인</span></div>
+        <div class="st"><div class="dot"></div><span>결제</span></div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="phwrap">
+            <div class="thumb illu jk">
+              <svg width="52" height="60" viewBox="0 0 64 72" fill="none">
+                <path d="M20 8 L32 14 L44 8 L56 16 L49 33 L45 29 V60 a3 3 0 0 1 -3 3 H22 a3 3 0 0 1 -3 -3 V29 L15 33 L8 16 Z" fill="#0A6E6F"/>
+                <path d="M26 9.5 L32 21 L38 9.5" stroke="#DCEFEF" stroke-width="2.4" stroke-linejoin="round" fill="none"/>
+                <line x1="32" y1="21" x2="32" y2="62" stroke="#DCEFEF" stroke-width="2"/>
+                <line x1="23" y1="46" x2="28" y2="46" stroke="#DCEFEF" stroke-width="2" stroke-linecap="round"/>
+                <line x1="36" y1="46" x2="41" y2="46" stroke="#DCEFEF" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span class="num">캡쳐 1</span>
+          </div>
+          <div class="meta">
+            <span class="badge ai"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>AI 판단 완료</span>
+            <div class="nm">빈티지 레더 자켓</div>
+            <div class="ds">브라운 · 아우터 · 프리사이즈 추정</div>
+            <div class="pr"><b>38,000원</b><span>AI 예상가</span></div>
+          </div>
+        </div>
+        <div class="cnote">표시 가격은 AI 예상가예요. <b>관리자 확인 후 최종 가격이 확정</b>되며, 상품 상태에 따라 조정될 수 있어요.</div>
+      </div>
+
+      <div class="card" style="opacity:.9">
+        <div class="row">
+          <div class="phwrap">
+            <div class="thumb illu dr" style="filter:saturate(.55);">
+              <svg width="48" height="58" viewBox="0 0 64 72" fill="none">
+                <path d="M25 6 v6 M39 6 v6" stroke="#E58A8A" stroke-width="2.4" stroke-linecap="round"/>
+                <path d="M24 12 h16 l3 16 h-22 z" fill="#F08A8A"/>
+                <path d="M21 28 h22 l9 36 a3 3 0 0 1 -3 3 H15 a3 3 0 0 1 -3 -3 z" fill="#FF6B6B"/>
+                <path d="M27 34 l-3 28 M37 34 l3 28" stroke="rgba(255,255,255,.4)" stroke-width="1.6"/>
+              </svg>
+            </div>
+            <span class="num">캡쳐 2</span>
+          </div>
+          <div class="meta">
+            <span class="badge wait"><span class="spin"></span>AI 분석 중</span>
+            <div class="sk" style="width:72%;margin:4px 0 8px;"></div>
+            <div class="sk" style="width:52%;margin-bottom:8px;"></div>
+            <div class="sk" style="width:36%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="cta teal">확정된 1개 상품 주문하기</button>
+      <button class="cta ghost">승인 알림 받고 나중에 결제할게요</button>
+    </div>
+  </div></div>
+  <div class="mix-note">v4 업로드 화면 베이스에, 상단 셀러 스트립만 <b>대표사진이 크게 보이는 스퀘어클 + 코랄 링 + LIVE 칩</b>으로 교체. 어느 셀러 방송의 캡쳐를 올리는 중인지 사진으로 바로 인지되고 「셀러 변경」으로 되돌아갈 수 있음.</div>
+</div>
+
+<!-- ============ 3. 주문 · 결제 ============ -->
+<div class="col">
+  <div class="col-label"><span class="n">03</span><span class="t">주문 · 결제</span><span class="d">1번 그대로 유지</span></div>
+  <div class="phone"><div class="scr">
+    <div class="notch"></div>
+    <div class="status"><span>9:41</span><div class="sig"><i></i><i class="b"></i></div></div>
+
+    <div class="nav">
+      <div class="bk"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></div>
+      <b>주문 / 결제</b>
+      <div class="sp"></div>
+    </div>
+
+    <div class="s3-body">
+      <div class="grade">
+        <span class="gb">STANDARD</span>
+        <p>하은님의 등급 혜택 적용 중<small>다음 등급까지 58,000원 남았어요</small></p>
+      </div>
+
+      <div class="panel">
+        <h4>주문 상품 <span class="r">1건</span></h4>
+        <div class="oitem">
+          <div class="oimg illu jk">
+            <svg width="40" height="46" viewBox="0 0 64 72" fill="none">
+              <path d="M20 8 L32 14 L44 8 L56 16 L49 33 L45 29 V60 a3 3 0 0 1 -3 3 H22 a3 3 0 0 1 -3 -3 V29 L15 33 L8 16 Z" fill="#0A6E6F"/>
+              <path d="M26 9.5 L32 21 L38 9.5" stroke="#DCEFEF" stroke-width="2.4" stroke-linejoin="round" fill="none"/>
+              <line x1="32" y1="21" x2="32" y2="62" stroke="#DCEFEF" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="m">
+            <b>빈티지 레더 자켓</b>
+            <span><i><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg></i>빈티지언니 · 관리자 승인 완료</span>
+          </div>
+          <div class="p">42,000원</div>
+        </div>
+
+        <div class="keep">
+          <div class="ki"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8.5 12 3 3 8.5v7L12 21l9-5.5z"/><path d="M3 8.5 12 14l9-5.5"/><path d="M12 21v-7"/></svg></div>
+          <div class="kt">
+            <b>Keep 하고 나중에 받기</b>
+            <p>바로 배송하지 않고 보관해요. 다음 구매와 함께 받으면 배송비를 아낄 수 있어요.</p>
+          </div>
+          <div class="tg"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h4>배송 정보 <span class="r"><i style="color:var(--coral);font-style:normal">*</i> 필수 입력</span></h4>
+        <div class="f2">
+          <div class="f"><label>이름 <i>*</i></label><div class="in">김하은</div></div>
+          <div class="f"><label>틱톡 닉네임 <i>*</i></label><div class="in">@haeun_x2</div></div>
+        </div>
+        <div class="f"><label>휴대폰 번호 <i>*</i></label><div class="in">010-1234-5678</div></div>
+        <div class="f"><label>주소 <i>*</i></label><div class="in focus">서울 마포구 와우산로 00, 302호</div></div>
+        <div class="f" style="margin-bottom:2px;"><label>배송 메시지</label><div class="in empty">부재 시 문 앞에 놓아주세요</div></div>
+      </div>
+
+      <div class="panel bill">
+        <h4>결제 금액</h4>
+        <div class="li"><span>상품 금액</span><b>42,000원</b></div>
+        <div class="li"><span>배송비</span><b>4,000원</b></div>
+        <div class="ship">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#005B5C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 8h4l3 5v4a1 1 0 0 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+          <p>제주·도서산간 포함 배송비 4,000원<br>10만원 이상 구매 시 무료배송</p>
+        </div>
+        <div class="tot"><span>총 결제 금액</span><b>46,000원</b></div>
+      </div>
+    </div>
+
+    <div class="paywrap">
+      <button class="cta coral">46,000원 결제하기</button>
+      <div class="agree"><u>개인정보 제3자 제공</u> 및 <u>결제 진행</u>에 동의합니다</div>
+    </div>
+  </div></div>
+  <div class="mix-note">등급 혜택 배너 · Keep 토글 · 필수 입력 표시 · 무료배송 안내까지 <b>v4 결제 화면 그대로 유지</b>. 셀러명만 플로우에 맞춰 통일.</div>
+</div>
+
+</div>
+</body>
+</html>
