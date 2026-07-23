@@ -1,5 +1,5 @@
 /**
- * 초대 토큰과 PIN — specs/features/client-login.md
+ * 초대 토큰과 PIN
  *
  * 순수 암호 유틸이다. DB도 쿠키도 모른다 — 저장은 lib/admin.ts(발급)와
  * lib/data.ts(검증)가 한다.

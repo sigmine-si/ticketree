@@ -102,8 +102,8 @@ export async function requireAdmin(): Promise<Session> {
  * 로컬 개발 전용 통로(`/dev-login`)가 열려 있는가.
  *
  * 이 화면은 로컬에서 로그인 흐름 없이 DB에 들어가는 유일한 문이라 남겨둔다.
- * 대신 실제 서비스에서는 닫힌다 — 거기 들어오는 문은 초대 링크뿐이다
- * (specs/features/client-login.md).
+ * 대신 실제 서비스에서는 닫힌다 — 이 통로는 아무 자격 확인 없이 아무 고객으로
+ * 로그인시켜 주므로, 열어두면 배포된 사이트에 자물쇠가 없는 것과 같다.
  */
 export function devLoginEnabled(): boolean {
   return process.env.NODE_ENV !== 'production'

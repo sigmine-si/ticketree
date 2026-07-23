@@ -1,15 +1,12 @@
 /**
- * 로그인 안내 — specs/features/client-login.md
+ * 로그인 안내.
  *
  * 세션 없이 클라이언트 화면에 닿은 사람이 도착하는 곳이다. 여기서 들어갈 수는
  * 없다 — 문은 관리자가 발급한 초대 링크뿐이고, 이 화면은 그 사실만 알린다.
  *
- * 로컬 개발에서는 `/dev-login`으로 가는 통로를 함께 보여준다. 실제 서비스에서는
- * 그 통로가 닫혀 있어 이 안내만 남는다.
+ * 개발용 통로(`/dev-login`)는 여기서 안내하지 않는다. 화면마다 환경 이야기가
+ * 따라붙는 걸 원하지 않아서다. 필요하면 주소로 바로 간다.
  */
-import Link from 'next/link'
-import { devLoginEnabled } from '@/lib/session'
-
 export const dynamic = 'force-dynamic'
 
 export default function LoginNotice() {
@@ -28,15 +25,6 @@ export default function LoginNotice() {
           링크가 더 이상 열리지 않는다면 담당자에게 재발급을 요청해주세요.
         </p>
       </div>
-
-      {devLoginEnabled() && (
-        <div className="card" style={{ marginTop: 14 }}>
-          <p className="ch">로컬 개발</p>
-          <p className="body">
-            개발 환경에서는 <Link href="/dev-login">개발용 로그인</Link>으로 바로 들어갈 수 있어요.
-          </p>
-        </div>
-      )}
     </main>
   )
 }

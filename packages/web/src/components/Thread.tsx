@@ -45,7 +45,7 @@ export function Thread({
   projectName: string
   busy: boolean
   /**
-   * false면 관리자 열람 — 답변·확정·견적 승인을 숨긴다 (specs/overview.md 주소 규약).
+   * false면 관리자 열람 — 답변·확정·견적 승인을 숨긴다 (주소 규약).
    * 자물쇠가 아니라 정직함이다. 실제 차단은 API의 requireClient가 한다.
    */
   canAct?: boolean

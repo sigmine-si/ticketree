@@ -75,7 +75,7 @@ export const users = pgTable(
     /** 초대 링크를 마지막으로 발급한 시각. 관리자 화면이 "발급됨"을 보여주는 근거다. */
     inviteIssuedAt: timestamp('invite_issued_at', { withTimezone: true }),
     /**
-     * PIN 연속 실패 횟수. 5가 되면 잠긴다 (specs/features/client-login.md).
+     * PIN 연속 실패 횟수. 5가 되면 잠긴다.
      * 인메모리가 아니라 DB에 두는 이유 — 프로세스가 재시작해도 잠금이 풀리면
      * "관리자가 다시 발급해야만 풀린다"가 거짓이 된다.
      */
