@@ -50,8 +50,7 @@ packages/web/      Next.js — 클라이언트 포털 + 관리자 대시보드
 - `src/app/invite/[token]/` — 초대 링크 + PIN 로그인. 로그인 없이 열리는 유일한
   클라이언트 화면이다. PIN 5회 연속 실패면 잠기고, 관리자 재발급으로만 풀린다.
 - `src/app/login/` — 세션 없이 들어온 사람이 도착하는 안내 화면. 여기서 들어갈 수는
-  없다 — 문은 초대 링크뿐이다. 로컬에서만 `/dev-login` 통로를 함께 보여준다.
-- `src/app/dev-login/` — **로컬 전용** 통로. `NODE_ENV=production`이면 404다.
+  없다 — 문은 초대 링크뿐이다. 환경에 따라 열리는 우회 통로는 없다.
 - `src/app/admin/` — 관리자 검토 큐와 요청 상세(명세 diff·승인·배포),
   `admin/invites`는 고객 계정별 초대 링크·PIN 발급.
 - `src/app/api/` — 서버 라우트. 클라이언트용과 관리자용이 경로로 갈린다.
@@ -62,7 +61,6 @@ packages/web/      Next.js — 클라이언트 포털 + 관리자 대시보드
 - `src/lib/specs.ts` — 명세 화면이 읽는 마크다운 파서. DB가 아니라 워크스페이스의
   파일을 그대로 읽는다 — 진실은 Git이므로.
 - `src/lib/session.ts` — 서명된 세션 쿠키. 클라이언트 세션과 관리자 세션이 별개다.
-  `devLoginEnabled()`가 로컬 전용 통로의 개폐를 정한다.
 - `src/lib/invite.ts` — 초대 토큰·PIN의 생성과 해시. node:crypto만 쓴다. 토큰은
   조회해야 하므로 SHA-256, PIN은 6자리뿐이라 salt + scrypt다. DB를 모르는 순수 모듈.
 
