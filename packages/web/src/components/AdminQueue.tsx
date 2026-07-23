@@ -125,7 +125,7 @@ export function AdminQueue({ rows }: { rows: QueueRowView[] }) {
                     </span>
                   </td>
                   <td className="r amt">
-                    {r.finalAmount ?? r.proposedAmount ? (
+                    {(r.finalAmount ?? r.proposedAmount) != null ? (
                       <>
                         {formatKrw(r.finalAmount ?? r.proposedAmount!)}
                         <span className="cost">

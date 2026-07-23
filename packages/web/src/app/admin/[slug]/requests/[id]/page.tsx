@@ -209,13 +209,13 @@ export default async function ReviewPage({
                   <div className="efrow">
                     <span>AI 제안가</span>
                     <span className="ev">
-                      {estimate?.proposedAmount ? formatKrw(estimate.proposedAmount) : '—'}
+                      {estimate?.proposedAmount != null ? formatKrw(estimate.proposedAmount) : '—'}
                     </span>
                   </div>
                   <div className="efrow">
                     <span>확정 청구</span>
                     <span className="ev">
-                      {estimate?.finalAmount ? formatKrw(estimate.finalAmount) : '미확정'}
+                      {estimate?.finalAmount != null ? formatKrw(estimate.finalAmount) : '미확정'}
                     </span>
                   </div>
                   <div className="efrow total">

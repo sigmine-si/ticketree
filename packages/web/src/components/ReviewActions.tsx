@@ -96,7 +96,8 @@ export function ReviewActions({
           </div>
           <div className="efrow total">
             <span>AI 제안가</span>
-            <span className="ev">{proposedAmount ? formatKrw(proposedAmount) : '—'}</span>
+            {/* 0원은 "산출 안 됨"이 아니다 — 계약 범위 내라는 판정 결과일 수 있다 */}
+            <span className="ev">{proposedAmount != null ? formatKrw(proposedAmount) : '—'}</span>
           </div>
         </div>
 

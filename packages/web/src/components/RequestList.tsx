@@ -118,7 +118,8 @@ export function RequestList({
           <div className="k">이번 달 확정 견적</div>
           <div className="v">
             ₩{monthTotal.toLocaleString('ko-KR')}
-            <small>{rows.filter((r) => r.finalAmount).length}건</small>
+            {/* 0원(계약 범위 내)도 확정된 견적이다 — falsy로 세면 빠진다 */}
+            <small>{rows.filter((r) => r.finalAmount != null).length}건</small>
           </div>
         </div>
       </div>
@@ -224,9 +225,9 @@ function RequestRow({ row, onOpen }: { row: Row; onOpen: () => void }) {
         )}
       </td>
       <td className="r amt">
-        {row.finalAmount ? (
+        {row.finalAmount != null ? (
           `₩${row.finalAmount.toLocaleString('ko-KR')}`
-        ) : row.roughMin && row.roughMax ? (
+        ) : row.roughMin != null && row.roughMax != null ? (
           <span className="range">
             {Math.round(row.roughMin / 10000)}~{Math.round(row.roughMax / 10000)}만
           </span>
