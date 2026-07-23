@@ -12,6 +12,10 @@ export const JOB_KINDS = [
   'exploration',
   'intake_round',
   'estimation',
+  // 과업내용서 — 접수 대화와 같은 이유로 둘이다(새 세션 / --resume 재개)
+  'sow_intake',
+  'sow_round',
+  'sow_spec_draft',
   'spec_draft',
   'spec_merge',
   'implementation',
@@ -29,8 +33,12 @@ export const LANE_OF_JOB: Record<JobKind, Lane> = {
   exploration: 'chat',
   intake_round: 'chat',
   estimation: 'chat',
+  // 과업내용서 대화도 클라이언트가 쓴 문장이 컨텍스트에 들어온다 — read-only 대화 레인이다.
+  sow_intake: 'chat',
+  sow_round: 'chat',
   // 명세 작성은 쓰기다 — 대화 레인(read-only)에 둘 수 없다.
   spec_draft: 'spec',
+  sow_spec_draft: 'spec',
   implementation: 'work',
   onboarding: 'work',
   // 아래 셋은 에이전트를 쓰지 않는다 — 러너가 직접 머지·배포한다 (§1).

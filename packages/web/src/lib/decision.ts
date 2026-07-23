@@ -46,6 +46,7 @@ export function decisionOf(
   if (status === 'client_approved') return 'spec'
   if (status === 'in_review' || status === 'awaiting_manual_deploy') return 'deploy'
   if (hasRunningJob) return 'running'
-  if (status === 'deployed') return 'done'
+  // 과업내용서는 명세가 머지되면 거기서 끝난다 — 개발·배포로 이어지지 않는다
+  if (status === 'deployed' || status === 'sow_active') return 'done'
   return 'waiting'
 }

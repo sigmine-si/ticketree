@@ -9,6 +9,7 @@ import type { Db } from './client'
 import { changeRequests, jobs, projects, requestEvents } from './schema'
 import { isClientTurn, type RequestStatus } from '../status'
 import { LANE_OF_JOB, type JobKind } from '../lanes'
+import type { RequestKind } from '../kind'
 
 export type ActorKind = 'client' | 'admin' | 'agent' | 'system'
 
@@ -99,14 +100,30 @@ export async function enqueueJob(db: Db, input: EnqueueInput): Promise<string> {
 /**
  * §16-4 — 프로젝트 내 일련번호를 원자적으로 소비한다.
  * max(req_no)+1은 동시 확정에서 깨지므로 쓰지 않는다.
+ *
+ * 요청과 과업내용서는 카운터가 따로다 — 한 카운터를 나눠 쓰면 클라이언트가 보는
+ * 번호에 구멍이 생긴다(REQ-001 다음이 REQ-003).
  */
-export async function allocateReqNo(db: Db, projectId: string): Promise<number> {
+export async function allocateNo(
+  db: Db,
+  projectId: string,
+  kind: RequestKind,
+): Promise<number> {
+  const isSow = kind === 'sow'
   const [row] = await db
     .update(projects)
-    .set({ nextReqNo: sql`${projects.nextReqNo} + 1` })
+    .set(
+      isSow
+        ? { nextSowNo: sql`${projects.nextSowNo} + 1` }
+        : { nextReqNo: sql`${projects.nextReqNo} + 1` },
+    )
     .where(eq(projects.id, projectId))
-    .returning({ next: projects.nextReqNo })
+    .returning({ next: isSow ? projects.nextSowNo : projects.nextReqNo })
   if (!row) throw new Error(`project ${projectId} not found`)
   // RETURNING은 갱신 후 값이므로 방금 소비한 번호는 하나 앞이다
   return row.next - 1
+}
+
+export function allocateReqNo(db: Db, projectId: string): Promise<number> {
+  return allocateNo(db, projectId, 'change')
 }

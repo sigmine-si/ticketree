@@ -1,4 +1,5 @@
 export * from './status'
+export * from './kind'
 export * from './lanes'
 export * from './project-settings'
 export * from './agent-io'
