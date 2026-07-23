@@ -1,11 +1,11 @@
 /**
- * 초대 링크 + PIN 로그인 — specs/features/client-login.md
+ * 초대 링크 + PIN 로그인.
  *
  * 로그인하지 않은 사람이 볼 수 있는 유일한 클라이언트 화면이다.
  * 토큰이 맞아야 PIN 폼이 열리고, PIN이 맞아야 세션이 나간다. 그 뒤로는
  * 기존 세션 레이어를 그대로 타므로 요청 목록·상세·명세는 바뀌지 않는다.
  *
- * 고정 이름이라 `/{slug}`보다 먼저 잡힌다 (specs/overview.md 주소 규약).
+ * 고정 이름이라 `/{slug}`보다 먼저 잡힌다 (주소 규약).
  */
 import { redirect } from 'next/navigation'
 import { clearPinFailures, findInviteByToken, recordPinFailure } from '@/lib/data'

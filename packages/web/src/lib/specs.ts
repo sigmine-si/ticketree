@@ -157,7 +157,7 @@ function isInternalHeading(h: string): boolean {
 }
 
 /**
- * 명세는 세 층이다 (specs/product.md 참조).
+ * 명세는 세 층이다.
  * product = 무엇을·누구를 위해, overview = 어느 기능도 혼자 소유하지 않는 것, feature = 각 기능.
  */
 export type SpecLayer = 'product' | 'overview' | 'feature'

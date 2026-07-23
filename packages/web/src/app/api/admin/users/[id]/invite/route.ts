@@ -4,8 +4,7 @@
  * 평문 토큰·PIN은 이 응답 본문에만 실린다. 주소나 리다이렉트에 싣지 않는다 —
  * 그러면 브라우저 기록과 서버 로그에 남는다.
  *
- * 재발급은 이전 링크·PIN을 함께 무효화하고, 5회 실패로 걸린 잠금도 푼다
- * (specs/features/client-login.md).
+ * 재발급은 이전 링크·PIN을 함께 무효화하고, 5회 실패로 걸린 잠금도 푼다.
  */
 import { NextResponse } from 'next/server'
 import { issueInvite } from '@/lib/admin'

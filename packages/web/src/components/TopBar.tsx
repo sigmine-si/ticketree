@@ -5,7 +5,7 @@ export function TopBar({
   projectName,
   userName,
   slug,
-  /** false면 관리자가 클라이언트 화면을 열어본 것이다 (specs/overview.md 주소 규약) */
+  /** false면 관리자가 클라이언트 화면을 열어본 것이다 (주소 규약) */
   canAct = true,
   active = 'requests',
 }: {

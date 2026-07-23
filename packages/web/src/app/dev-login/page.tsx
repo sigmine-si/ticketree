@@ -3,7 +3,7 @@
  *
  * 실제 클라이언트 로그인은 초대 링크 + PIN이다 (`/invite/[token]`).
  * 이 화면은 로컬에서 로그인 흐름 없이 DB에 들어가는 유일한 문이라 남겨두되,
- * 실제 서비스에서는 통째로 닫는다 — specs/features/client-login.md.
+ * 실제 서비스에서는 통째로 닫는다 — 열어두면 누구나 아무 고객으로 로그인된다.
  */
 import { notFound } from 'next/navigation'
 import { eq } from 'drizzle-orm'
