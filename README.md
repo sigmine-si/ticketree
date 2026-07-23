@@ -6,8 +6,7 @@ Spec Driven Development 기반 외주 개발 운영 플랫폼.
 
 기획서: [spec.md](spec.md) · 명세: [specs/features/](specs/features) · 목업: `client-portal-mockup.html`, `admin-dashboard-mockup.html`
 
-`spec.md`는 플랫폼 기획서(내부 문서)이고, `specs/features/*.md`는 이 저장소가
-플랫폼의 관리 대상 프로젝트로서 갖는 클라이언트용 명세다. 아래 도그푸딩 참조.
+`spec.md`는 플랫폼 기획서(내부 문서)이고, `specs/features/*.md`는 지금 유효한 명세다.
 
 ## 구조
 
@@ -50,33 +49,6 @@ pnpm dev          # web + runner
 둘 중 하나라도 비어 있으면 로그인 화면이 열리지 않는다. 자격증명을 통과하기 전에는
 `users` 행이 만들어지지 않는다.
 
-## 도그푸딩 — ticketree로 ticketree를 개발한다
-
-이 저장소는 플랫폼이면서 동시에 플랫폼이 관리하는 프로젝트다 (§16-8).
-
-```bash
-pnpm seed:self    # 자기 자신을 프로젝트로 등록한다
-```
-
-`workspaces/ticketree/`에 **별도 클론**을 만든다. 개발 중인 이 디렉터리를 워크스페이스로
-쓰지 않는다 — 러너가 `git reset --hard origin/main`을 걸기 때문에 커밋 안 한 변경이 날아간다.
-
-돌리는 법:
-
-1. `pnpm dev`로 웹과 러너를 띄운다
-2. `/dev-login`(로컬 전용)에서 '시그마인 / Ticket Tree'로 들어가 요청을 낸다
-3. `/admin`에서 명세와 배포를 승인한다
-4. 머지된 변경은 `git pull`로 이 디렉터리에 가져온다 — 워크스페이스 클론과는 별개다
-
-주의할 점:
-
-- 명세 화면과 에이전트가 읽는 것은 **origin/main**이다. `specs/`·`CLAUDE.md`·`digest.md`를
-  고쳤으면 push해야 도그푸딩에 반영된다.
-- 구현 job이 커밋할 수 있는 경로는 `projects.settings.codePaths`로 정한다. 이 프로젝트는
-  모노레포라 `packages/`·`scripts/`이고, 단일 저장소 프로젝트는 기본값 `src/`다.
-- 러너가 자기 자신의 코드를 고쳐도 실행 중인 러너는 영향받지 않는다. 작업은 별도
-  worktree에서 일어나고, 반영은 `git pull` + 재시작 시점에 일어난다.
-
 ## 접수 대화 직접 돌려보기
 
 러너를 띄우지 않고 job 하나만 실행한다.
@@ -101,5 +73,4 @@ PROJECT_SLUG=ticketree pnpm --filter @ticketree/runner exec tsx src/dev/try-inta
 - [x] 슬라이스 2 — 관리자 결정 큐 (GitHub OAuth, 견적 산출, 이중 게이트)
 - [x] 슬라이스 3 — Spec·허브 repo (명세 PR·머지·명세 화면)
 - [x] 슬라이스 4 — 구현·배포 (worktree·코드 PR·머지·수동 배포·예정→정식)
-- [x] 도그푸딩 준비 — 자기 자신을 프로젝트로 등록 (`pnpm seed:self`)
 - [x] 슬라이스 5 — 운영 (고아 job 회수·알림 뱃지·원가 화면·온보딩 job·프로덕션 빌드)

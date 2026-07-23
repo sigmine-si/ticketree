@@ -16,8 +16,7 @@
     "dev:web": "pnpm --filter @ticketree/web dev",
     "dev:runner": "pnpm --filter @ticketree/runner dev",
     "typecheck": "pnpm -r typecheck",
-    "seed:demo": "pnpm --filter @ticketree/shared exec tsx src/seed-greenloop.ts",
-    "seed:self": "pnpm --filter @ticketree/shared exec tsx src/seed-ticketree.ts"
+    "seed:demo": "pnpm --filter @ticketree/shared exec tsx src/seed-greenloop.ts"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
