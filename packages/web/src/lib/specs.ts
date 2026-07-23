@@ -337,9 +337,23 @@ export async function readSpecs(workspacePath: string): Promise<FeatureSpec[]> {
     // 기능 명세가 없어도 product/overview는 있을 수 있다
   }
 
+  // specs/ 바로 아래 문서는 전부 흐름 층이다. product.md 만 제품 층으로 따로 뺀다.
+  // 파일을 하나 더 놓는 것만으로 화면에 붙게 하려는 것이다 — 코드를 고칠 일이 없다.
+  let topLevel: string[] = []
+  try {
+    topLevel = (await readdir(specsDir)).filter((n) => n.endsWith('.md'))
+  } catch {
+    // specs/ 자체가 없는 프로젝트
+  }
+
   const all = await Promise.all([
-    readOne(join(specsDir, 'product.md'), 'product', 'product'),
-    readOne(join(specsDir, 'overview.md'), 'overview', 'overview'),
+    ...topLevel.map((name) =>
+      readOne(
+        join(specsDir, name),
+        name.replace(/\.md$/, ''),
+        name === 'product.md' ? 'product' : 'overview',
+      ),
+    ),
     ...names.map((name) =>
       readOne(join(featuresDir, name), name.replace(/\.md$/, ''), 'feature'),
     ),
