@@ -184,7 +184,7 @@ export interface FeatureSpec {
  * REQ 없는 `(예정)`은 요청에 아직 묶이지 않은 항목이다 — 목업에서 명세를 먼저 쓰면
  * 이 형태가 나온다. 번호가 없다고 버리면 화면에 "(예정)"이 글자로 남는다.
  */
-const PENDING = /^\((?:예정(?:\s*·\s*(REQ-\d+))?|(REQ-\d+))\)\s*/
+const PENDING = /^\((?:예정(?:\s*·\s*((?:REQ|SOW)-\d+))?|((?:REQ|SOW)-\d+))\)\s*/
 
 function parseCriterion(line: string): Criterion | null {
   if (!line) return null
@@ -220,7 +220,9 @@ function compareVersion(a: string, b: string): number {
 
 function parseHistory(line: string): HistoryEntry | null {
   // - v1.1 (REQ-001) 2026-07-22 정산 예정일 표기를 …   (날짜는 선택)
-  const m = line.match(/^-\s*(v[\d.]+)\s*(?:\((REQ-\d+)\))?\s*(\d{4}-\d{2}-\d{2})?\s*(.*)$/)
+  const m = line.match(
+    /^-\s*(v[\d.]+)\s*(?:\(((?:REQ|SOW)-\d+)\))?\s*(\d{4}-\d{2}-\d{2})?\s*(.*)$/,
+  )
   if (!m) return null
   return { version: m[1]!, reqTag: m[2] ?? null, date: m[3] ?? null, text: m[4]!.trim() }
 }

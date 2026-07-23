@@ -171,6 +171,7 @@ export const NOTICE_LABEL: Record<string, string> = {
   manual_deploy_required: '머지됐어요 — 실제 배포가 필요해요',
   escalated: '담당자가 막혔어요 — 답변이 필요해요',
   job_failed: '작업이 실패했어요',
+  sow_active: '과업내용서가 발효됐어요 — 이제 이 범위로 요청을 받습니다',
 }
 
 /**

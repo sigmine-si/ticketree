@@ -81,7 +81,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       .where(
         and(
           eq(pullRequests.requestId, request.id),
-          eq(pullRequests.kind, 'spec'),
+          // 과업내용서의 명세 PR도 같은 승인 경로를 지난다 — 종류만 다르다
+          eq(pullRequests.kind, request.kind === 'sow' ? 'sow_spec' : 'spec'),
           eq(pullRequests.status, 'open'),
         ),
       )
@@ -121,7 +122,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     await enqueueJob(db, {
       projectId: request.projectId,
       requestId: request.id,
-      kind: 'spec_draft',
+      kind: request.kind === 'sow' ? 'sow_spec_draft' : 'spec_draft',
     })
     await logEvent(db, request.id, actor, { redoSpec: true, comment })
     return NextResponse.json({ ok: true, status: 'redrafting' })
