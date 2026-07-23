@@ -273,8 +273,6 @@ function QuestionBlock({
   disabled: boolean
 }) {
   const [text, setText] = useState('')
-  // 칩은 고르기만 한다 — 실제 전송은 '답변 보내기'에서 일어난다. 그 전까지 자유롭게 바꾼다
-  const [selected, setSelected] = useState<number | null>(null)
 
   // 관리자 열람 — 무엇을 물었는지는 보여주고, 답하는 자리만 걷는다
   if (!q.answeredAt && !canAct) {
@@ -304,10 +302,6 @@ function QuestionBlock({
     )
   }
 
-  // 고른 칩이 있으면 그 칩, 없으면 직접 입력한 글이 보낼 답이다
-  const value = selected !== null ? q.options[selected] : text.trim()
-  const canSend = !disabled && value.length > 0
-
   return (
     <div className="q">
       <p className="qt">
@@ -319,13 +313,9 @@ function QuestionBlock({
           {q.options.map((o, i) => (
             <button
               key={i}
-              className={`chip${selected === i ? ' sel' : ''}`}
+              className="chip"
               disabled={disabled}
-              onClick={() => {
-                // 다시 누르면 선택 해제. 칩을 고르면 직접 입력은 비운다
-                setSelected(selected === i ? null : i)
-                setText('')
-              }}
+              onClick={() => void onAnswer(q, o, i)}
             >
               {o}
             </button>
@@ -336,20 +326,16 @@ function QuestionBlock({
         <input
           value={text}
           disabled={disabled}
-          onChange={(e) => {
-            setText(e.target.value)
-            // 직접 입력을 시작하면 골라둔 칩은 놓는다
-            if (selected !== null) setSelected(null)
-          }}
+          onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && canSend) void onAnswer(q, value, selected)
+            if (e.key === 'Enter' && text.trim()) void onAnswer(q, text.trim(), null)
           }}
           placeholder="직접 입력"
         />
         <button
           className="btn"
-          disabled={!canSend}
-          onClick={() => canSend && void onAnswer(q, value, selected)}
+          disabled={disabled}
+          onClick={() => text.trim() && void onAnswer(q, text.trim(), null)}
         >
           답변 보내기
         </button>
