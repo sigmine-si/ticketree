@@ -10,7 +10,7 @@ dist/
 # 에이전트 워크스페이스 — 영속 데이터, git 관리 대상 아님
 workspaces/
 
-# 도그푸딩 — 이 저장소가 워크스페이스로 복제됐을 때 생기는 구현 worktree
+# 러너가 구현 job에서 만드는 worktree (프로젝트 워크스페이스 하위)
 work/
 
 .DS_Store

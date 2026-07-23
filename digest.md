@@ -22,7 +22,7 @@ packages/web/      Next.js — 클라이언트 포털 + 관리자 대시보드
 - `src/db/ops.ts` — `transition`(상태 전이 + 이벤트 기록)과 `enqueueJob`. 상태를 바꾸는
   모든 경로가 여기를 지난다.
 - `src/db/client.ts` — 커넥션 풀.
-- `src/seed.ts` · `src/seed-greenloop.ts` · `src/seed-ticketree.ts` — 개발용 시드.
+- `src/seed.ts` · `src/seed-greenloop.ts` — 개발용 시드.
 
 ## packages/runner
 
