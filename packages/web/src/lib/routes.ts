@@ -9,6 +9,9 @@
 export const clientPath = {
   requests: (slug: string) => `/${slug}/requests`,
   request: (slug: string, reqNo: number) => `/${slug}/requests/${reqNo}`,
+  /** 과업내용서 — 계약 단위라 요청과 목록이 갈린다 */
+  sows: (slug: string) => `/${slug}/sow`,
+  sow: (slug: string, sowNo: number) => `/${slug}/sow/${sowNo}`,
   spec: (slug: string, f?: string) => (f ? `/${slug}/spec?f=${f}` : `/${slug}/spec`),
   /** 로그인하지 않은 사람이 닿는 곳. 들어오는 문은 초대 링크뿐이라 안내만 한다. */
   login: '/login',

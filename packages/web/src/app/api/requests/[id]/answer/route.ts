@@ -76,7 +76,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   await enqueueJob(db, {
     projectId: session.projectId,
     requestId: request.id,
-    kind: 'intake_round',
+    // 과업내용서 대화도 같은 문답 구조를 쓴다 — 깨우는 job만 다르다
+    kind: request.kind === 'sow' ? 'sow_round' : 'intake_round',
   })
 
   return NextResponse.json({ remaining: 0, queued: true })

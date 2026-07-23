@@ -7,7 +7,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { allocateReqNo, changeRequests, enqueueJob, messages } from '@ticketree/shared'
-import { db } from '@/lib/data'
+import { db, getActiveSows } from '@/lib/data'
 import { requireClient, Unauthorized } from '@/lib/session'
 
 const bodySchema = z.object({
@@ -35,6 +35,10 @@ export async function POST(req: Request) {
   }
   const { asIs, toBe, urgency } = parsed.data
 
+  // 이 요청이 어느 계약 아래 놓이는지 **생성 시점에 고정한다.**
+  // 나중에 다음 계약이 발효돼도 "무엇을 근거로 0원이었나"가 기록에 남아야 한다.
+  const [activeSow] = await getActiveSows(session.projectId)
+
   const created = await db.transaction(async (tx) => {
     const reqNo = await allocateReqNo(tx as never, session.projectId)
     const [request] = await tx
@@ -47,6 +51,7 @@ export async function POST(req: Request) {
         urgency: urgency ?? null,
         status: 'draft',
         createdBy: session.userId,
+        sowId: activeSow?.id ?? null,
       })
       .returning({ id: changeRequests.id })
 

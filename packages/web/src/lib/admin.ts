@@ -16,7 +16,10 @@ import {
   type EstimationResult,
   type IntakeResult,
   type RequestFlag,
+  type RequestKind,
   type RequestStatus,
+  type SowDoc,
+  type SowResult,
   migrateCommandOf,
   needsMigration,
   pendingNotices,
@@ -35,6 +38,7 @@ export { decisionOf, DECISION_LABEL, DECISION_TONE, type Decision } from './deci
 
 export interface QueueRow {
   id: string
+  kind: RequestKind
   reqNo: number | null
   title: string | null
   projectName: string
@@ -47,6 +51,8 @@ export interface QueueRow {
   updatedAt: Date
   finalAmount: number | null
   proposedAmount: number | null
+  /** included면 큐에서도 금액 대신 "계약 포함"으로 보인다 */
+  scopeVerdict: string | null
   costUsd: number
 }
 
@@ -54,6 +60,7 @@ export async function listQueue(): Promise<QueueRow[]> {
   const rows = await db
     .select({
       id: changeRequests.id,
+      kind: changeRequests.kind,
       reqNo: changeRequests.reqNo,
       title: changeRequests.title,
       status: changeRequests.status,
@@ -89,6 +96,7 @@ export async function listQueue(): Promise<QueueRow[]> {
       requestId: estimates.requestId,
       finalAmount: estimates.finalAmount,
       proposedAmount: estimates.proposedAmount,
+      scopeVerdict: estimates.scopeVerdict,
     })
     .from(estimates)
     .where(inArray(estimates.requestId, ids))
@@ -103,14 +111,17 @@ export async function listQueue(): Promise<QueueRow[]> {
       const flag = r.flag as RequestFlag | null
       const job = runBy.get(r.id)
       const decision = decisionOf(status, flag, Boolean(job))
+      const kind = r.kind as RequestKind
       return {
         ...r,
+        kind,
         status,
         flag,
         decision,
-        note: adminNote(status, flag, job?.statusText ?? null),
+        note: adminNote(status, flag, job?.statusText ?? null, kind),
         finalAmount: estBy.get(r.id)?.finalAmount ?? null,
         proposedAmount: estBy.get(r.id)?.proposedAmount ?? null,
+        scopeVerdict: estBy.get(r.id)?.scopeVerdict ?? null,
         costUsd: costBy.get(r.id) ?? 0,
       }
     })
@@ -126,10 +137,26 @@ function adminNote(
   status: RequestStatus,
   flag: RequestFlag | null,
   statusText: string | null,
+  kind: RequestKind = 'change',
 ): string {
   if (flag === 'escalated') return '에이전트 질문 — 해석이 필요합니다'
+  if (flag === 'on_hold') return '클라이언트가 범위 판정에 이견을 냈습니다'
   if (flag === 'failed') return 'job 실패 — 재시도 후에도 실패'
   if (statusText) return statusText
+  if (kind === 'sow') {
+    switch (status) {
+      case 'draft':
+        return '과업내용서 정리 중 — 아직 확정 전'
+      case 'awaiting_client':
+        return '클라이언트 답변 대기'
+      case 'submitted':
+        return '확정됨 — 명세 초안 작성 중'
+      case 'client_approved':
+        return '과업내용서 명세 검토 필요 — 머지하면 계약이 발효됩니다'
+      case 'sow_active':
+        return '계약 발효 중 — 이 범위가 견적의 기준이 됩니다'
+    }
+  }
   switch (status) {
     case 'draft':
       return '접수 대화 중 — 아직 확정 전'
@@ -171,6 +198,8 @@ export const NOTICE_LABEL: Record<string, string> = {
   manual_deploy_required: '머지됐어요 — 실제 배포가 필요해요',
   escalated: '담당자가 막혔어요 — 답변이 필요해요',
   job_failed: '작업이 실패했어요',
+  sow_active: '과업내용서가 발효됐어요 — 이제 이 범위로 요청을 받습니다',
+  scope_disputed: '클라이언트가 범위 판정에 이견을 냈어요 — 확인이 필요합니다',
 }
 
 /**
@@ -339,6 +368,8 @@ export interface ReviewDetail {
   request: typeof changeRequests.$inferSelect
   project: typeof projects.$inferSelect
   intake: IntakeResult | null
+  /** 과업내용서 본문 — kind='sow'일 때만 채워진다 */
+  sow: SowDoc | null
   estimation: EstimationResult | null
   estimate: typeof estimates.$inferSelect | null
   qa: Array<{ prompt: string; answer: string }>
@@ -386,6 +417,11 @@ export async function getReviewDetail(requestId: string): Promise<ReviewDetail |
     (msgs.find((m) => m.role === 'agent')?.payload as IntakeResult | null) ??
     null
 
+  // 과업내용서면 탐색 노트가 아니라 계약 본문이 검토 대상이다
+  const sow =
+    (msgs.find((m) => m.role === 'agent' && (m.payload as SowResult | null)?.sow)
+      ?.payload as SowResult | null)?.sow ?? null
+
   const [estimate] = await db
     .select()
     .from(estimates)
@@ -412,7 +448,8 @@ export async function getReviewDetail(requestId: string): Promise<ReviewDetail |
   const [specPr] = await db
     .select()
     .from(pullRequests)
-    .where(and(eq(pullRequests.requestId, requestId), eq(pullRequests.kind, 'spec')))
+    // 과업내용서의 명세 PR도 같은 자리에 걸린다 — 한 요청에 둘 다 있을 수는 없다
+    .where(and(eq(pullRequests.requestId, requestId), inArray(pullRequests.kind, ['spec', 'sow_spec'])))
     .orderBy(desc(pullRequests.createdAt))
     .limit(1)
 
@@ -435,6 +472,7 @@ export async function getReviewDetail(requestId: string): Promise<ReviewDetail |
     request,
     project: project!,
     intake,
+    sow,
     estimation: estimation && 'wbs' in (estimation as object) ? estimation : null,
     estimate: estimate ?? null,
     qa: await collectQa(requestId),

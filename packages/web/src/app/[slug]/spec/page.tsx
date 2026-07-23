@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { and, eq, inArray } from 'drizzle-orm'
 import { changeRequests } from '@ticketree/shared'
+import { parseTag, requestTag, type RequestKind } from '@ticketree/shared/kind'
 import { db } from '@/lib/data'
 import { clientSections, readSpecs, sectionText } from '@/lib/specs'
 import { requireProjectAccess } from '@/lib/scope'
@@ -34,18 +35,33 @@ export default async function SpecPage({
   const { f } = await searchParams
   const current = specs.find((s) => s.slug === f) ?? specs[0] ?? null
 
-  // 예정 항목이 가리키는 요청을 스레드로 역추적할 수 있게 번호를 맞춰둔다
-  const reqTags = [...new Set(specs.flatMap((s) => s.pendingReqTags))]
-  const reqNos = reqTags.map((t) => Number(t.replace('REQ-', '')))
-  const openRequests = reqNos.length
+  // 예정 항목이 가리키는 요청·과업내용서를 역추적할 수 있게 번호를 맞춰둔다.
+  // 태그가 종류를 말해준다 — REQ와 SOW는 번호 공간이 달라 번호만으로는 못 가른다.
+  const pendingTags = [...new Set(specs.flatMap((s) => s.pendingReqTags))]
+  const parsedTags = pendingTags
+    .map((t) => parseTag(t))
+    .filter((t): t is { kind: RequestKind; no: number } => t !== null)
+  const linked = parsedTags.length
     ? await db
-        .select({ reqNo: changeRequests.reqNo, title: changeRequests.title })
+        .select({
+          kind: changeRequests.kind,
+          reqNo: changeRequests.reqNo,
+          title: changeRequests.title,
+        })
         .from(changeRequests)
         .where(
-          and(eq(changeRequests.projectId, project.id), inArray(changeRequests.reqNo, reqNos)),
+          and(
+            eq(changeRequests.projectId, project.id),
+            inArray(
+              changeRequests.reqNo,
+              parsedTags.map((t) => t.no),
+            ),
+          ),
         )
     : []
-  const titleOf = new Map(openRequests.map((r) => [`REQ-${String(r.reqNo).padStart(3, '0')}`, r.title]))
+  const titleOf = new Map(
+    linked.map((r) => [requestTag(r.kind as RequestKind, r.reqNo), r.title]),
+  )
 
   return (
     <>
@@ -118,14 +134,23 @@ export default async function SpecPage({
                       </svg>
                       <div>
                         <span className="ct">변경 예정</span> —{' '}
-                        {current.pendingReqTags.map((t, i) => (
-                          <span key={t}>
-                            {i > 0 && ', '}
-                            <Link href={clientPath.request(slug, Number(t.replace('REQ-', '')))}>
-                              {t} {titleOf.get(t) ?? ''}
-                            </Link>
-                          </span>
-                        ))}
+                        {current.pendingReqTags.map((t, i) => {
+                          const p = parseTag(t)
+                          return (
+                            <span key={t}>
+                              {i > 0 && ', '}
+                              <Link
+                                href={
+                                  p?.kind === 'sow'
+                                    ? clientPath.sow(slug, p.no)
+                                    : clientPath.request(slug, p?.no ?? 0)
+                                }
+                              >
+                                {t} {titleOf.get(t) ?? ''}
+                              </Link>
+                            </span>
+                          )
+                        })}
                         가 진행 중이에요. 아래에 <span className="ftag">예정</span> 표시된 항목은
                         배포가 끝나면 이 명세에 정식으로 반영됩니다.
                       </div>

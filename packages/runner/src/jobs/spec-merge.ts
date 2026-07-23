@@ -33,13 +33,17 @@ export async function runSpecMergeJob(db: Db, job: ClaimedJob): Promise<JobOutco
   const [project] = await db.select().from(projects).where(eq(projects.id, job.projectId))
   if (!project?.workspacePath) throw new Error(`project ${job.projectId} has no workspace_path`)
 
+  // 과업내용서의 명세 PR도 같은 승인 경로를 지난다 — PR 종류만 다르다
+  const isSow = request.kind === 'sow'
+  const tag = `${isSow ? 'SOW' : 'REQ'}-${String(request.reqNo).padStart(3, '0')}`
+
   const [pr] = await db
     .select()
     .from(pullRequests)
     .where(
       and(
         eq(pullRequests.requestId, request.id),
-        eq(pullRequests.kind, 'spec'),
+        eq(pullRequests.kind, isSow ? 'sow_spec' : 'spec'),
         eq(pullRequests.status, 'open'),
       ),
     )
@@ -47,7 +51,12 @@ export async function runSpecMergeJob(db: Db, job: ClaimedJob): Promise<JobOutco
 
   // PR을 만든 뒤 main이 움직였을 수 있다. 겹치지 않으면 여기서 풀리고,
   // 진짜 충돌이면 사람에게 넘긴다 — 러너가 한쪽을 고르면 승인된 것과 다른 게 머지된다.
-  if (!(await syncBranchWithMain(project.workspacePath, pr.branch ?? `spec/REQ-${String(request.reqNo).padStart(3, '0')}`))) {
+  if (
+    !(await syncBranchWithMain(
+      project.workspacePath,
+      pr.branch ?? `${isSow ? 'sow' : 'spec'}/${tag}`,
+    ))
+  ) {
     await db
       .update(changeRequests)
       .set({
@@ -88,6 +97,20 @@ export async function runSpecMergeJob(db: Db, job: ClaimedJob): Promise<JobOutco
     .update(specVersions)
     .set({ status: 'merged', mergedAt: new Date() })
     .where(and(eq(specVersions.requestId, request.id), eq(specVersions.status, 'proposed')))
+
+  if (isSow) {
+    // 과업내용서는 여기서 끝난다. 계약이 발효되고, 만드는 일은 이후 요청(티켓)이 한다.
+    // 구현 job을 등록하지 않는 것이 이 갈림길의 전부다.
+    await transition(db, request.id, 'sow_active', SYSTEM, { mergedPr: pr.prNumber })
+    await db.insert(pendingNotices).values({ requestId: request.id, type: 'sow_active' })
+    return {
+      status: 'done',
+      result: { prNumber: pr.prNumber, merged: true, sowActive: true } as never,
+      tokensIn: 0,
+      tokensOut: 0,
+      costUsd: 0,
+    }
+  }
 
   await transition(db, request.id, 'queued_dev', SYSTEM, { mergedPr: pr.prNumber })
 

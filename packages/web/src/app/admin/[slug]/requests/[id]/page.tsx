@@ -2,6 +2,10 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { formatKrw, usdToKrw } from '@ticketree/shared/money'
 import type { RequestFlag, RequestStatus } from '@ticketree/shared/status'
+import { requestTag, type RequestKind } from '@ticketree/shared/kind'
+import { SowCard } from '@/components/SowCard'
+import { ScopeOverride } from '@/components/ScopeOverride'
+import type { ScopeVerdict } from '@ticketree/shared/agent-io'
 import { getSession } from '@/lib/session'
 import { getReviewDetail, ledger, noticeItems } from '@/lib/admin'
 import { adminPath } from '@/lib/routes'
@@ -29,8 +33,9 @@ export default async function ReviewPage({
   // 그럴듯한 화면을 띄우면 어느 프로젝트 건인지 착각한 채 승인하게 된다
   if (detail.project.slug !== slug) notFound()
 
-  const { request, project, intake, estimation, estimate, qa, jobs, similar, specPr, codePr } =
+  const { request, project, intake, sow, estimation, estimate, qa, jobs, similar, specPr, codePr } =
     detail
+  const isSow = request.kind === 'sow'
   const status = request.status as RequestStatus
   const flag = request.flag as RequestFlag | null
   const decision = decisionOf(status, flag, false)
@@ -51,7 +56,7 @@ export default async function ReviewPage({
           <div className="row1">
             <div>
               <div className="tno-big">
-                REQ-{String(request.reqNo ?? 0).padStart(3, '0')} · {project.name} ·{' '}
+                {requestTag(request.kind as RequestKind, request.reqNo)} · {project.name} ·{' '}
                 {project.clientName}
               </div>
               <h2>{request.title ?? '확인 중인 요청'}</h2>
@@ -75,8 +80,13 @@ export default async function ReviewPage({
               <EscalationAnswer requestId={request.id} question={intake?.escalation ?? intake?.message ?? null} />
             )}
 
+            {/* 계약 본문을 안 읽고 승인할 수는 없다 — 머지되는 순간 이게 계약 범위가 된다 */}
+            {isSow && sow && (
+              <SowCard sow={sow} tag={requestTag('sow', request.reqNo)} />
+            )}
+
             <div className="card">
-              <p className="ch">클라이언트 요청 원문</p>
+              <p className="ch">{isSow ? '클라이언트가 처음 쓴 내용' : '클라이언트 요청 원문'}</p>
               <p className="cs">여기서 시작했다</p>
               {request.asIs && (
                 <p className="note" style={{ marginBottom: 10 }}>
@@ -88,7 +98,8 @@ export default async function ReviewPage({
               </p>
             </div>
 
-            {intake && (
+            {/* 과업내용서에는 탐색 노트가 없다 — 읽을 코드가 없는 자리에서 만들어진다 */}
+            {!isSow && intake && (
               <div className="card">
                 <p className="ch">탐색 노트</p>
                 <p className="cs">
@@ -129,6 +140,11 @@ export default async function ReviewPage({
                     <span>
                       {w.task}
                       {w.repo && <span className="ftag" style={{ marginLeft: 6 }}>{w.repo}</span>}
+                      {w.covered && (
+                        <span className="ftag" style={{ marginLeft: 6 }}>
+                          계약 포함{w.sow_clause ? ` · ${w.sow_clause}` : ''}
+                        </span>
+                      )}
                     </span>
                     <span className="h">{w.hours}h</span>
                   </div>
@@ -142,6 +158,50 @@ export default async function ReviewPage({
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* 판정과 근거를 여기 안 띄우면 관리자 조정 게이트가 실제로는 작동하지 않는다 */}
+            {estimate?.scopeVerdict && (
+              <div className="card">
+                <p className="ch">범위 판정</p>
+                <p className="cs">
+                  {estimate.scopeVerdict === 'included'
+                    ? '계약 범위 안 — 청구하지 않음'
+                    : estimate.scopeVerdict === 'partial'
+                      ? '일부만 계약 범위 — 초과분만 청구'
+                      : '계약 범위 밖 — 전액 청구'}
+                  {estimate.coveredAmount != null &&
+                    estimate.coveredAmount > 0 &&
+                    ` · 계약 커버분 ${formatKrw(estimate.coveredAmount)}`}
+                </p>
+                {estimation?.scope?.admin_note && (
+                  <p className="note" style={{ marginBottom: 10 }}>
+                    {estimation.scope.admin_note}
+                  </p>
+                )}
+                {(estimation?.scope?.basis ?? []).map((b, i) => (
+                  <div key={i} className="qa">
+                    <p className="q">
+                      {b.sow}
+                      {b.clause && ` · ${b.clause}`}
+                      <span className="ftag" style={{ marginLeft: 6 }}>
+                        {b.reason === 'in_scope'
+                          ? '범위 내'
+                          : b.reason === 'excluded'
+                            ? '제외 범위'
+                            : '해당 없음'}
+                      </span>
+                    </p>
+                    <p className="a">{b.quote}</p>
+                  </div>
+                ))}
+                {estimate.scopeOverriddenBy && (
+                  <p className="margin-note">
+                    관리자가 판정을 조정했어요
+                    {estimate.scopeOverrideNote ? ` — ${estimate.scopeOverrideNote}` : ''}
+                  </p>
                 )}
               </div>
             )}
@@ -184,6 +244,7 @@ export default async function ReviewPage({
             {status === 'client_approved' ? (
               <ReviewActions
                 requestId={request.id}
+                kind={request.kind as RequestKind}
                 proposedAmount={estimate?.proposedAmount ?? null}
                 finalAmount={estimate?.finalAmount ?? null}
                 estimatedTokens={estimate?.costEstimateTokens ?? null}
@@ -203,7 +264,19 @@ export default async function ReviewPage({
                 migration={detail.migration}
               />
             ) : (
-              <div className="card">
+              <>
+                {/* 클라이언트가 승인하기 전에만 열린다 — 승인 뒤에 바꾸면 번복이다 */}
+                {(status === 'quote_ready' || status === 'estimating') && estimate && (
+                  <ScopeOverride
+                    requestId={request.id}
+                    verdict={(estimate.scopeVerdict as ScopeVerdict | null) ?? null}
+                    proposedAmount={estimate.proposedAmount}
+                    coveredAmount={estimate.coveredAmount}
+                    clientNote={estimate.scopeClientNote}
+                    disputed={flag === 'on_hold'}
+                  />
+                )}
+                <div className="card">
                 <p className="ch">견적</p>
                 <div className="est-figs">
                   <div className="efrow">
@@ -226,7 +299,8 @@ export default async function ReviewPage({
                 <p className="margin-note">
                   지금은 결정할 것이 없어요 — {DECISION_LABEL[decision]}
                 </p>
-              </div>
+                </div>
+              </>
             )}
 
             <div className="card">

@@ -28,6 +28,10 @@ const tag = (reqNo: number) => `REQ-${String(reqNo).padStart(3, '0')}`
 export function specBranch(reqNo: number): string {
   return `spec/${tag(reqNo)}`
 }
+/** 과업내용서의 명세 브랜치. 요청과 번호 공간이 달라 말머리도 다르다. */
+export function sowBranch(sowNo: number): string {
+  return `sow/SOW-${String(sowNo).padStart(3, '0')}`
+}
 export function devBranch(reqNo: number): string {
   return `dev/${tag(reqNo)}`
 }

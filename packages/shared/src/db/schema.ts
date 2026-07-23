@@ -18,6 +18,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 
 const createdAt = timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
@@ -41,6 +42,11 @@ export const projects = pgTable('projects', {
   settings: jsonb('settings').notNull().default(sql`'{}'::jsonb`),
   /** §16-4 채번 카운터. max(req_no)+1은 경합에서 깨지므로 쓰지 않는다. */
   nextReqNo: integer('next_req_no').notNull().default(1),
+  /**
+   * 과업내용서 채번. REQ와 번호 공간을 나눈다 —
+   * 한 카운터를 쓰면 REQ-001 다음이 REQ-003이 되어 클라이언트 화면에 번호가 빈다.
+   */
+  nextSowNo: integer('next_sow_no').notNull().default(1),
   createdAt,
 })
 
@@ -103,6 +109,20 @@ export const changeRequests = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
+    /**
+     * change | sow — 과업내용서는 계약 단위라 견적·개발·배포 단계가 없다.
+     * 같은 테이블에 두는 이유는 대화·질문·세션·job·이벤트·PR이 전부 request_id를
+     * 물고 있어서다. 별도 테이블은 그 여덟을 복제하거나 폴리모픽으로 만든다.
+     */
+    kind: text('kind').notNull().default('change'),
+    /**
+     * 이 요청이 어느 과업내용서 범위 아래 있는가 — 범위 판정의 입력.
+     * 생성 시점에 고정한다. 나중에 3차 계약이 들어와도 "어느 계약을 근거로
+     * 0원이었나"가 남아야 한다. kind='sow'면 NULL.
+     */
+    sowId: uuid('sow_id').references((): AnyPgColumn => changeRequests.id, {
+      onDelete: 'set null',
+    }),
     /** 프로젝트 내 일련번호. draft 단계에서는 NULL — 확정 시 채번한다. */
     reqNo: integer('req_no'),
     /** 제출 시 LLM이 자동 생성 (§4) */
@@ -124,7 +144,8 @@ export const changeRequests = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('change_requests_project_req_no_idx').on(t.projectId, t.reqNo),
+    // kind가 들어가야 한다 — 없으면 SOW-001과 REQ-001이 둘 다 req_no=1이라 충돌한다
+    uniqueIndex('change_requests_project_req_no_idx').on(t.projectId, t.kind, t.reqNo),
     index('change_requests_project_status_idx').on(t.projectId, t.status),
   ],
 )
@@ -195,7 +216,7 @@ export const agentSessions = pgTable('agent_sessions', {
   /** resume에는 session_id와 cwd가 둘 다 필요하다 (§4) */
   sessionId: text('session_id').notNull(),
   cwd: text('cwd').notNull(),
-  /** intake | implementation */
+  /** intake | sow | implementation */
   kind: text('kind').notNull(),
   tokenTotal: bigint('token_total', { mode: 'number' }).notNull().default(0),
   startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
@@ -266,6 +287,28 @@ export const estimates = pgTable('estimates', {
   costEstimateTokens: bigint('cost_estimate_tokens', { mode: 'number' }),
   /** 작업 분해 */
   wbs: jsonb('wbs').notNull().default(sql`'[]'::jsonb`),
+  /**
+   * 범위 판정 — included | partial | out_of_scope.
+   * NULL이면 판정하지 않았다는 뜻이다(과업내용서가 없는 프로젝트). 화면은 이전 그대로다.
+   *
+   * 컬럼으로 두는 이유: 근거 본문은 wbs jsonb에 통째로 실리지만, 목록과 큐에서
+   * 뱃지를 그리려면 jsonb를 파지 않고 읽을 수 있어야 한다.
+   */
+  scopeVerdict: text('scope_verdict'),
+  /** 판정 근거가 된 과업내용서. 여러 개가 걸리면 주된 것 하나. */
+  sowId: uuid('sow_id').references(() => changeRequests.id, { onDelete: 'set null' }),
+  /** ScopeBasis[] — 과업내용서 원문 인용. 요약하지 않는다. */
+  scopeBasis: jsonb('scope_basis').notNull().default(sql`'[]'::jsonb`),
+  /** 계약으로 커버되는 금액. proposed_amount와 더하면 전체 규모다. */
+  coveredAmount: integer('covered_amount'),
+  /** 클라이언트에게 그대로 나가는 판정 문장. 관리자가 뒤집으면 이 값이 대체된다. */
+  scopeClientNote: text('scope_client_note'),
+  /**
+   * AI 판정을 뒤집은 관리자. NULL이면 AI 판정 그대로다.
+   * 뒤집는 순간 그건 AI의 추정이 아니라 회사의 약속이므로 서명이 남아야 한다.
+   */
+  scopeOverriddenBy: uuid('scope_overridden_by').references(() => users.id),
+  scopeOverrideNote: text('scope_override_note'),
   clientApprovedAt: timestamp('client_approved_at', { withTimezone: true }),
   adminId: uuid('admin_id').references(() => users.id),
   createdAt,
@@ -299,7 +342,7 @@ export const pullRequests = pgTable('pull_requests', {
   requestId: uuid('request_id').references(() => changeRequests.id, { onDelete: 'cascade' }),
   /** NULL이면 허브(Spec) PR */
   repoId: uuid('repo_id').references(() => repos.id, { onDelete: 'set null' }),
-  /** spec | code | onboarding */
+  /** spec | code | onboarding | sow_spec */
   kind: text('kind').notNull(),
   prNumber: integer('pr_number').notNull(),
   status: text('status').notNull().default('open'),

@@ -8,26 +8,38 @@
  */
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { IntakeResult } from '@ticketree/shared/agent-io'
+import type {
+  IntakeResult,
+  ScopeBasis,
+  ScopeVerdict,
+  SowResult,
+} from '@ticketree/shared/agent-io'
+import type { RequestKind } from '@ticketree/shared/kind'
+import { QuestionBlock, type ThreadQuestion } from './QuestionBlock'
+import { SowCard } from './SowCard'
 
-export interface ThreadQuestion {
-  id: string
-  idx: number
-  prompt: string
-  hint: string | null
-  options: string[]
-  answerText: string | null
-  answeredAt: string | null
-}
+export type { ThreadQuestion }
+
+/**
+ * 접수 대화와 과업내용서 대화가 같은 스레드 구조를 쓴다 — 담기는 결과만 다르다.
+ * 어느 쪽인지는 필드 존재로 가른다(아래 summaryOf·sowOf).
+ */
+export type ThreadPayload = IntakeResult | SowResult
+
 export interface ThreadMessage {
   id: string
   round: number
   role: 'client' | 'agent' | 'system'
   content: string
-  payload: IntakeResult | null
+  payload: ThreadPayload | null
   createdAt: string
   questions: ThreadQuestion[]
 }
+
+const summaryOf = (p: ThreadPayload | null) =>
+  p && p.outcome === 'ready' && 'summary' in p ? p.summary : undefined
+const sowOf = (p: ThreadPayload | null) =>
+  p && p.outcome === 'ready' && 'sow' in p ? p.sow : undefined
 
 export function Thread({
   requestId,
@@ -38,12 +50,15 @@ export function Thread({
   canAct = true,
   canConfirm,
   quote,
+  kind = 'change',
 }: {
   requestId: string
   messages: ThreadMessage[]
   clientName: string
   projectName: string
   busy: boolean
+  /** 과업내용서면 견적·승인 자리가 없고 확정 문구가 달라진다 */
+  kind?: RequestKind
   /**
    * false면 관리자 열람 — 답변·확정·견적 승인을 숨긴다 (주소 규약).
    * 자물쇠가 아니라 정직함이다. 실제 차단은 API의 requireClient가 한다.
@@ -51,10 +66,24 @@ export function Thread({
   canAct?: boolean
   canConfirm: boolean
   /** quote_ready일 때만 채워진다 — 확정 견적과 승인 버튼 (§7 이중 게이트의 첫 번째) */
-  quote: { amount: number; days: string | null; scope: string[] } | null
+  quote: {
+    amount: number
+    days: string | null
+    scope: string[]
+    /** 과업내용서 범위 판정. 계약이 없는 프로젝트는 null이고 화면이 이전 그대로다. */
+    verdict: ScopeVerdict | null
+    clientNote: string | null
+    coveredAmount: number | null
+    basis: ScopeBasis[]
+    coveredTasks: string[]
+    billableTasks: string[]
+  } | null
 }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
+  /** null이면 닫힘. 범위 판정에 이견이 있을 때만 연다. */
+  const [dispute, setDispute] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   // 진행 중일 때만 폴링한다 — 끝난 요청까지 계속 두드릴 이유가 없다
   useEffect(() => {
@@ -83,7 +112,25 @@ export function Thread({
 
   async function approveQuote() {
     setPending(true)
-    await fetch(`/api/requests/${requestId}/approve-quote`, { method: 'POST' })
+    const res = await fetch(`/api/requests/${requestId}/approve-quote`, { method: 'POST' })
+    if (!res.ok) setError(((await res.json()) as { error?: string }).error ?? '처리하지 못했어요')
+    router.refresh()
+    setPending(false)
+  }
+
+  async function sendDispute() {
+    if (!dispute?.trim()) return
+    setPending(true)
+    const res = await fetch(`/api/requests/${requestId}/dispute-scope`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: dispute.trim() }),
+    })
+    if (!res.ok) {
+      setError(((await res.json()) as { error?: string }).error ?? '보내지 못했어요')
+    } else {
+      setDispute(null)
+    }
     router.refresh()
     setPending(false)
   }
@@ -115,15 +162,24 @@ export function Thread({
       {busy && (
         <div className="status-line">
           <span className="spinner" role="status" aria-label="확인 중" />
-          <span>요청 내용을 확정하기 위해 살펴보고 있어요 — 잠시 후 질문 또는 견적이 도착합니다</span>
+          <span>
+            {kind === 'sow'
+              ? '과업내용서를 정리하고 있어요 — 잠시 후 질문이 도착합니다'
+              : '요청 내용을 확정하기 위해 살펴보고 있어요 — 잠시 후 질문 또는 견적이 도착합니다'}
+          </span>
         </div>
       )}
 
       {canConfirm && canAct && (
         <div className="card">
+          {kind === 'sow' && (
+            <p className="cs" style={{ marginBottom: 10 }}>
+              확정하면 이 내용이 계약 범위가 되고, 서비스 명세로 정리돼요.
+            </p>
+          )}
           <div className="est-actions" style={{ marginTop: 0 }}>
             <button className="btn btn-primary" onClick={confirm} disabled={pending}>
-              이 내용으로 요청하기
+              {kind === 'sow' ? '이 과업내용서로 확정하기' : '이 내용으로 요청하기'}
             </button>
           </div>
         </div>
@@ -132,13 +188,32 @@ export function Thread({
       {quote && (
         <div className="card est">
           <div className="est-head">
-            <span className="t">확정 견적</span>
-            <span className="note">승인하면 개발이 시작돼요</span>
+            <span className="t">
+              {quote.verdict === 'included' ? '추가 비용 없이 진행돼요' : '확정 견적'}
+            </span>
+            <span className="note">
+              {quote.verdict === 'included'
+                ? '승인하면 개발이 시작돼요'
+                : quote.verdict === 'partial'
+                  ? '계약에 없던 부분만 비용이 들어요'
+                  : '승인하면 개발이 시작돼요'}
+            </span>
           </div>
+
+          {quote.clientNote && (
+            <p className="cs" style={{ marginBottom: 12 }}>
+              {quote.clientNote}
+            </p>
+          )}
+
           <div className="figures">
             <div className="fig">
-              <div className="k">확정 비용</div>
-              <div className="v">₩{quote.amount.toLocaleString('ko-KR')}</div>
+              <div className="k">{quote.verdict === 'partial' ? '추가 비용' : '확정 비용'}</div>
+              <div className="v">
+                {quote.verdict === 'included'
+                  ? '추가 비용 없음'
+                  : `₩${quote.amount.toLocaleString('ko-KR')}`}
+              </div>
             </div>
             <div className="fig">
               <div className="k">예상 기간</div>
@@ -149,24 +224,96 @@ export function Thread({
               <div className="v">기능 {quote.scope.length}건</div>
             </div>
           </div>
-          {quote.scope.length > 0 && (
-            <div className="scope">
-              <p className="sk">포함되는 작업</p>
-              {quote.scope.map((s, i) => (
-                <div className="scope-item" key={i}>
-                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                  {s}
+
+          {/* 일부만 포함일 때는 두 블록으로 갈라 그린다 — 섞으면 무엇이 유료인지 안 보인다 */}
+          {quote.verdict === 'partial' ? (
+            <>
+              {quote.coveredTasks.length > 0 && (
+                <div className="scope">
+                  <p className="sk">계약에 포함된 부분 — 추가 비용 없음</p>
+                  {quote.coveredTasks.map((s, i) => (
+                    <div className="scope-item" key={i}>
+                      <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                      {s}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+              {quote.billableTasks.length > 0 && (
+                <div className="scope" style={{ marginTop: 12 }}>
+                  <p className="sk">계약에 없던 새 작업 — 별도 비용</p>
+                  {quote.billableTasks.map((s, i) => (
+                    <div className="scope-item" key={i}>
+                      <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                      {s}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            quote.scope.length > 0 && (
+              <div className="scope">
+                <p className="sk">포함되는 작업</p>
+                {quote.scope.map((s, i) => (
+                  <div className="scope-item" key={i}>
+                    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    {s}
+                  </div>
+                ))}
+              </div>
+            )
           )}
+
+          {quote.basis.length > 0 && <ScopeBasisBlock basis={quote.basis} />}
+
+          {error && (
+            <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{error}</p>
+          )}
+
           {/* 견적 자체는 관리자에게도 보인다. 누르는 것만 클라이언트의 몫이다 (§7 이중 게이트) */}
           {canAct && (
             <div className="est-actions">
               <button className="btn btn-primary" onClick={approveQuote} disabled={pending}>
-                견적 승인하고 진행
+                {quote.verdict === 'included' ? '이 내용으로 진행하기' : '견적 승인하고 진행'}
+              </button>
+              {/*
+                판정에 반박할 통로가 없으면 분쟁을 막은 게 아니라 일방 통보로 바꾼 것이다.
+                그러면 분쟁은 플랫폼 밖으로 나가고 기록이 안 남는다.
+              */}
+              {quote.verdict !== null && quote.verdict !== 'included' && (
+                <button
+                  className="btn"
+                  disabled={pending}
+                  onClick={() => setDispute(dispute === null ? '' : null)}
+                >
+                  계약에 포함된 것 같아요
+                </button>
+              )}
+            </div>
+          )}
+
+          {canAct && dispute !== null && (
+            <div className="redo-box" style={{ marginTop: 12 }}>
+              <textarea
+                className="redo-input"
+                rows={3}
+                value={dispute}
+                onChange={(e) => setDispute(e.target.value)}
+                placeholder="어느 부분이 계약에 포함되어 있다고 보시는지 알려주세요 — 담당 매니저가 계약서와 대조해 다시 안내드려요"
+              />
+              <button
+                className="btn btn-primary"
+                disabled={pending || !dispute.trim()}
+                onClick={sendDispute}
+              >
+                보내기
               </button>
             </div>
           )}
@@ -190,7 +337,8 @@ function AgentCard({
   disabled: boolean
 }) {
   const answered = m.questions.filter((q) => q.answeredAt).length
-  const summary = m.payload?.outcome === 'ready' ? m.payload.summary : undefined
+  const summary = summaryOf(m.payload)
+  const sow = sowOf(m.payload)
 
   return (
     <div className={`card${m.questions.length ? ' qcard' : ''}`}>
@@ -245,6 +393,8 @@ function AgentCard({
         </div>
       )}
 
+      {sow && <SowCard sow={sow} inline />}
+
       {m.payload?.outcome === 'escalate' && (
         <div className="callout" style={{ marginTop: 12 }}>
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
@@ -261,99 +411,55 @@ function AgentCard({
   )
 }
 
-function QuestionBlock({
-  q,
-  onAnswer,
-  canAct,
-  disabled,
-}: {
-  q: ThreadQuestion
-  onAnswer: (q: ThreadQuestion, text: string, optionIdx: number | null) => Promise<void>
-  canAct: boolean
-  disabled: boolean
-}) {
-  const [text, setText] = useState('')
-  // 칩은 고르기만 한다 — 실제 전송은 '답변 보내기'에서 일어난다. 그 전까지 자유롭게 바꾼다
-  const [selected, setSelected] = useState<number | null>(null)
-
-  // 관리자 열람 — 무엇을 물었는지는 보여주고, 답하는 자리만 걷는다
-  if (!q.answeredAt && !canAct) {
-    return (
-      <div className="q">
-        <p className="qt">
-          {q.idx + 1}. {q.prompt}
-        </p>
-        <p className="qs">클라이언트 답변을 기다리는 중이에요</p>
-      </div>
-    )
-  }
-
-  if (q.answeredAt) {
-    return (
-      <div className="q">
-        <p className="qt">
-          {q.idx + 1}. {q.prompt}
-        </p>
-        <div className="answered">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
-          {q.answerText}
-        </div>
-      </div>
-    )
-  }
-
-  // 고른 칩이 있으면 그 칩, 없으면 직접 입력한 글이 보낼 답이다
-  const value = (selected !== null ? q.options[selected] : text.trim()) ?? ''
-  const canSend = !disabled && value.length > 0
+/**
+ * 판정 근거 — 과업내용서 원문을 그대로 보여준다.
+ *
+ * 문장을 조립하지 않고 원문을 찍는다. 이 기능이 분쟁을 막는 방식이
+ * "우리가 이렇게 판단했습니다"가 아니라 "계약서에 이렇게 적혀 있습니다"이기 때문이다.
+ *
+ * 제외 범위에 걸린 근거는 접지 않고 펼쳐둔다 — 계약할 때 명시적으로 뺀 항목이라는
+ * 사실이 클라이언트가 알아야 할 것 중 가장 중요하다.
+ */
+function ScopeBasisBlock({ basis }: { basis: ScopeBasis[] }) {
+  const hasExcluded = basis.some((b) => b.reason === 'excluded')
+  const [open, setOpen] = useState(hasExcluded)
 
   return (
-    <div className="q">
-      <p className="qt">
-        {q.idx + 1}. {q.prompt}
-      </p>
-      <p className="qs">{q.hint ?? '보기에 없으면 아래에 직접 적어주세요'}</p>
-      {q.options.length > 0 && (
-        <div className="chips" style={{ marginBottom: 10 }}>
-          {q.options.map((o, i) => (
-            <button
+    <div style={{ marginTop: 14 }}>
+      <button
+        className="btn"
+        style={{ fontSize: 13, padding: '6px 12px' }}
+        onClick={() => setOpen(!open)}
+      >
+        {open ? '근거 접기' : '어디에 그렇게 적혀 있나요?'}
+      </button>
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          {basis.map((b, i) => (
+            <div
               key={i}
-              className={`chip${selected === i ? ' sel' : ''}`}
-              disabled={disabled}
-              onClick={() => {
-                // 다시 누르면 선택 해제. 칩을 고르면 직접 입력은 비운다
-                setSelected(selected === i ? null : i)
-                setText('')
+              style={{
+                borderLeft: '3px solid var(--line)',
+                paddingLeft: 12,
+                marginBottom: 12,
               }}
             >
-              {o}
-            </button>
+              <p className="qs" style={{ marginBottom: 4 }}>
+                {b.sow}
+                {b.clause && ` · ${b.clause}`}
+                {b.reason === 'excluded' && (
+                  <span className="ftag" style={{ marginLeft: 6 }}>
+                    제외 범위
+                  </span>
+                )}
+              </p>
+              <p className="body" style={{ margin: 0 }}>
+                {b.quote}
+              </p>
+            </div>
           ))}
         </div>
       )}
-      <div className="answer-row">
-        <input
-          value={text}
-          disabled={disabled}
-          onChange={(e) => {
-            setText(e.target.value)
-            // 직접 입력을 시작하면 골라둔 칩은 놓는다
-            if (selected !== null) setSelected(null)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && canSend) void onAnswer(q, value, selected)
-          }}
-          placeholder="직접 입력"
-        />
-        <button
-          className="btn"
-          disabled={!canSend}
-          onClick={() => canSend && void onAnswer(q, value, selected)}
-        >
-          답변 보내기
-        </button>
-      </div>
     </div>
   )
 }

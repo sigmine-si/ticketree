@@ -27,6 +27,13 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (request.status !== 'quote_ready') {
     return NextResponse.json({ error: '승인할 수 있는 상태가 아니에요' }, { status: 409 })
   }
+  // 범위 판정에 이의를 낸 동안에는 승인이 잠긴다 — 이견을 낸 금액이 그대로 확정되면 안 된다
+  if (request.flag === 'on_hold') {
+    return NextResponse.json(
+      { error: '알려주신 내용을 확인하는 중이에요 — 답변 후에 진행할 수 있어요' },
+      { status: 409 },
+    )
+  }
 
   const [estimate] = await db
     .select()

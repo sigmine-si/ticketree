@@ -17,6 +17,7 @@ import {
   type IntakeResult,
   type RequestFlag,
   type RequestStatus,
+  type SowResult,
 } from '@ticketree/shared'
 import { hashInviteToken, MAX_PIN_ATTEMPTS } from './invite'
 
@@ -35,6 +36,8 @@ export interface RequestRow {
   roughMin: number | null
   roughMax: number | null
   finalAmount: number | null
+  /** included면 목록에서 금액 대신 "추가 비용 없음"을 보여준다 */
+  scopeVerdict: string | null
   /** 실행 중인 job의 버퍼링 문구 — 있으면 목록에 스피너를 띄운다 */
   runningStatusText: string | null
 }
@@ -56,7 +59,9 @@ export async function listRequests(projectId: string): Promise<RequestRow[]> {
       updatedAt: changeRequests.updatedAt,
     })
     .from(changeRequests)
-    .where(eq(changeRequests.projectId, projectId))
+    // 과업내용서는 요청이 아니다 — 이 필터가 두 목록이 섞이지 않게 하는 불변식이고,
+    // 덕분에 stageOf(4단계)가 kind를 몰라도 된다
+    .where(and(eq(changeRequests.projectId, projectId), eq(changeRequests.kind, 'change')))
     .orderBy(desc(changeRequests.updatedAt))
 
   if (rows.length === 0) return []
@@ -68,6 +73,7 @@ export async function listRequests(projectId: string): Promise<RequestRow[]> {
       roughMin: estimates.roughMin,
       roughMax: estimates.roughMax,
       finalAmount: estimates.finalAmount,
+      scopeVerdict: estimates.scopeVerdict,
     })
     .from(estimates)
     .where(inArray(estimates.requestId, ids))
@@ -87,6 +93,7 @@ export async function listRequests(projectId: string): Promise<RequestRow[]> {
     roughMin: estBy.get(r.id)?.roughMin ?? null,
     roughMax: estBy.get(r.id)?.roughMax ?? null,
     finalAmount: estBy.get(r.id)?.finalAmount ?? null,
+    scopeVerdict: estBy.get(r.id)?.scopeVerdict ?? null,
     runningStatusText: runBy.get(r.id) ?? null,
   }))
 }
@@ -108,6 +115,102 @@ export async function getRequestById(projectId: string, id: string) {
   return r ?? null
 }
 
+// ─────────────────────────────── 과업내용서
+
+export interface SowRow {
+  id: string
+  reqNo: number | null
+  title: string | null
+  status: RequestStatus
+  flag: RequestFlag | null
+  yourTurn: boolean
+  updatedAt: Date
+  confirmedAt: Date | null
+  runningStatusText: string | null
+  /** 확정된 과업 범위 항목 수 — 목록에서 규모를 가늠하는 값 */
+  scopeCount: number
+}
+
+export async function listSows(projectId: string): Promise<SowRow[]> {
+  const rows = await db
+    .select({
+      id: changeRequests.id,
+      reqNo: changeRequests.reqNo,
+      title: changeRequests.title,
+      status: changeRequests.status,
+      flag: changeRequests.flag,
+      yourTurn: changeRequests.yourTurn,
+      updatedAt: changeRequests.updatedAt,
+      confirmedAt: changeRequests.confirmedAt,
+    })
+    .from(changeRequests)
+    .where(and(eq(changeRequests.projectId, projectId), eq(changeRequests.kind, 'sow')))
+    // 계약은 차수 순으로 읽힌다 — 최신 갱신순이 아니다
+    .orderBy(desc(changeRequests.reqNo))
+
+  if (rows.length === 0) return []
+  const ids = rows.map((r) => r.id)
+
+  // 라운드 오름차순으로 훑어 마지막으로 본문이 실린 것만 남긴다
+  const msgs = await db
+    .select({ requestId: messages.requestId, payload: messages.payload })
+    .from(messages)
+    .where(and(inArray(messages.requestId, ids), eq(messages.role, 'agent')))
+    .orderBy(asc(messages.round))
+
+  const scopeBy = new Map<string, number>()
+  for (const m of msgs) {
+    const sow = (m.payload as { sow?: { scope?: unknown[] } } | null)?.sow
+    if (sow?.scope?.length) scopeBy.set(m.requestId, sow.scope.length)
+  }
+
+  const running = await db
+    .select({ requestId: jobs.requestId, statusText: jobs.statusText })
+    .from(jobs)
+    .where(and(inArray(jobs.requestId, ids), eq(jobs.status, 'running')))
+  const runBy = new Map(running.map((j) => [j.requestId!, j.statusText]))
+
+  return rows.map((r) => ({
+    ...r,
+    status: r.status as RequestStatus,
+    flag: r.flag as RequestFlag | null,
+    scopeCount: scopeBy.get(r.id) ?? 0,
+    runningStatusText: runBy.get(r.id) ?? null,
+  }))
+}
+
+export async function getSow(projectId: string, sowNo: number) {
+  const [r] = await db
+    .select()
+    .from(changeRequests)
+    .where(
+      and(
+        eq(changeRequests.projectId, projectId),
+        eq(changeRequests.kind, 'sow'),
+        eq(changeRequests.reqNo, sowNo),
+      ),
+    )
+  return r ?? null
+}
+
+/**
+ * 발효 중인 과업내용서 — 새 요청이 어느 계약 아래 놓이는지 정한다.
+ * 여러 개면 최신 차수가 앞이다.
+ */
+export async function getActiveSows(projectId: string) {
+  return db
+    .select()
+    .from(changeRequests)
+    .where(
+      and(
+        eq(changeRequests.projectId, projectId),
+        eq(changeRequests.kind, 'sow'),
+        eq(changeRequests.status, 'sow_active'),
+      ),
+    )
+    .orderBy(desc(changeRequests.reqNo))
+}
+
 export interface ThreadQuestion {
   id: string
   idx: number
@@ -118,12 +221,15 @@ export interface ThreadQuestion {
   answeredAt: Date | null
 }
 
+/** 접수 대화와 과업내용서 대화가 같은 스레드에 실린다 — 결과 모양만 다르다 */
+export type ThreadPayload = IntakeResult | SowResult
+
 export interface ThreadMessage {
   id: string
   round: number
   role: 'client' | 'agent' | 'system'
   content: string
-  payload: IntakeResult | null
+  payload: ThreadPayload | null
   createdAt: Date
   questions: ThreadQuestion[]
 }
@@ -168,7 +274,7 @@ export async function getThread(requestId: string): Promise<ThreadMessage[]> {
     round: m.round,
     role: m.role as ThreadMessage['role'],
     content: m.content,
-    payload: (m.payload ?? null) as IntakeResult | null,
+    payload: (m.payload ?? null) as ThreadPayload | null,
     createdAt: m.createdAt,
     questions: byMessage.get(m.id) ?? [],
   }))
