@@ -51,6 +51,8 @@ export interface QueueRow {
   updatedAt: Date
   finalAmount: number | null
   proposedAmount: number | null
+  /** included면 큐에서도 금액 대신 "계약 포함"으로 보인다 */
+  scopeVerdict: string | null
   costUsd: number
 }
 
@@ -94,6 +96,7 @@ export async function listQueue(): Promise<QueueRow[]> {
       requestId: estimates.requestId,
       finalAmount: estimates.finalAmount,
       proposedAmount: estimates.proposedAmount,
+      scopeVerdict: estimates.scopeVerdict,
     })
     .from(estimates)
     .where(inArray(estimates.requestId, ids))
@@ -118,6 +121,7 @@ export async function listQueue(): Promise<QueueRow[]> {
         note: adminNote(status, flag, job?.statusText ?? null, kind),
         finalAmount: estBy.get(r.id)?.finalAmount ?? null,
         proposedAmount: estBy.get(r.id)?.proposedAmount ?? null,
+        scopeVerdict: estBy.get(r.id)?.scopeVerdict ?? null,
         costUsd: costBy.get(r.id) ?? 0,
       }
     })

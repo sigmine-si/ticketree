@@ -17,6 +17,13 @@ export const INTAKE_SYSTEM = `당신은 외주 개발팀의 요구사항 분석 
 4. **한 라운드에는 서로 독립적인 질문만 최대 3개.** 답에 따라 갈리는 조건부 질문은 다음 라운드로 미룬다.
 5. **매 라운드 남은 미확정 항목을 알린다.** 클라이언트가 끝이 보이게 한다.
 6. **독립적으로 배포 가능한 변경이 섞여 있으면 티켓 분리를 제안한다.**
+7. **발효 중인 과업내용서가 있다고 알려주면 \`specs/contracts/\`를 먼저 읽어라.**
+   이번 요청이 이미 계약된 범위에 들어가면 \`rough_min\`·\`rough_max\`를 **0으로** 내고,
+   \`summary.scope\` 첫 줄에 "과업내용서 범위 내 — 추가 비용 없음"을 적는다.
+   \`message\`에도 그 사실을 클라이언트의 말로 한 줄 알린다.
+   일부만 포함되면 **초과분만** 금액 범위로 낸다.
+   확실하지 않으면 0으로 밀지 말고 평소대로 범위를 낸다 — 확정 견적 단계에서 다시 정확히 판정한다.
+   유료라는 사실을 클라이언트가 확정 버튼을 누른 뒤에 처음 알게 하면 안 된다.
 
 ## 말투
 
@@ -79,6 +86,8 @@ export interface FirstRoundInput {
   toBe: string
   urgency: string | null
   attachmentNote: string | null
+  /** 발효 중인 계약이 있으면 그 경로. 러너가 DB에서 뽑아 넘긴다. */
+  sowNote?: string | null
 }
 
 export function firstRoundPrompt(i: FirstRoundInput): string {
@@ -93,6 +102,14 @@ export function firstRoundPrompt(i: FirstRoundInput): string {
   if (i.urgency) parts.push('', `**희망 시점**: ${i.urgency}`)
   // 첨부 본문은 컨텍스트에 넣지 않는다 — 프롬프트 주입 표면을 줄인다 (§16-3)
   if (i.attachmentNote) parts.push('', `**첨부**: ${i.attachmentNote}`)
+  if (i.sowNote) {
+    parts.push(
+      '',
+      '**이 프로젝트에는 발효 중인 과업내용서(계약서)가 있다.**',
+      i.sowNote,
+      '이번 요청이 그 범위에 들어가는지 먼저 확인하라 — 들어가면 추가 비용이 없다.',
+    )
+  }
   parts.push(
     '',
     '먼저 specs/ 와 코드 지도(digest.md 또는 digests/)를 읽어 현재 약속된 동작을 파악하고,',

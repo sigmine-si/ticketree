@@ -21,6 +21,7 @@ export interface QueueRowView {
   updatedAt: string
   finalAmount: number | null
   proposedAmount: number | null
+  scopeVerdict: string | null
   costUsd: number
 }
 
@@ -127,7 +128,14 @@ export function AdminQueue({ rows }: { rows: QueueRowView[] }) {
                     </span>
                   </td>
                   <td className="r amt">
-                    {(r.finalAmount ?? r.proposedAmount) != null ? (
+                    {r.scopeVerdict === 'included' ? (
+                      <>
+                        <span className="tbd">계약 포함</span>
+                        <span className="cost">
+                          원가 {r.costUsd > 0 ? formatKrw(usdToKrw(r.costUsd)) : '—'}
+                        </span>
+                      </>
+                    ) : (r.finalAmount ?? r.proposedAmount) != null ? (
                       <>
                         {formatKrw(r.finalAmount ?? r.proposedAmount!)}
                         <span className="cost">

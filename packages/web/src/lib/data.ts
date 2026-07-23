@@ -36,6 +36,8 @@ export interface RequestRow {
   roughMin: number | null
   roughMax: number | null
   finalAmount: number | null
+  /** included면 목록에서 금액 대신 "추가 비용 없음"을 보여준다 */
+  scopeVerdict: string | null
   /** 실행 중인 job의 버퍼링 문구 — 있으면 목록에 스피너를 띄운다 */
   runningStatusText: string | null
 }
@@ -71,6 +73,7 @@ export async function listRequests(projectId: string): Promise<RequestRow[]> {
       roughMin: estimates.roughMin,
       roughMax: estimates.roughMax,
       finalAmount: estimates.finalAmount,
+      scopeVerdict: estimates.scopeVerdict,
     })
     .from(estimates)
     .where(inArray(estimates.requestId, ids))
@@ -90,6 +93,7 @@ export async function listRequests(projectId: string): Promise<RequestRow[]> {
     roughMin: estBy.get(r.id)?.roughMin ?? null,
     roughMax: estBy.get(r.id)?.roughMax ?? null,
     finalAmount: estBy.get(r.id)?.finalAmount ?? null,
+    scopeVerdict: estBy.get(r.id)?.scopeVerdict ?? null,
     runningStatusText: runBy.get(r.id) ?? null,
   }))
 }

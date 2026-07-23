@@ -8,7 +8,12 @@
  */
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { IntakeResult, SowResult } from '@ticketree/shared/agent-io'
+import type {
+  IntakeResult,
+  ScopeBasis,
+  ScopeVerdict,
+  SowResult,
+} from '@ticketree/shared/agent-io'
 import type { RequestKind } from '@ticketree/shared/kind'
 import { QuestionBlock, type ThreadQuestion } from './QuestionBlock'
 import { SowCard } from './SowCard'
@@ -61,7 +66,18 @@ export function Thread({
   canAct?: boolean
   canConfirm: boolean
   /** quote_ready일 때만 채워진다 — 확정 견적과 승인 버튼 (§7 이중 게이트의 첫 번째) */
-  quote: { amount: number; days: string | null; scope: string[] } | null
+  quote: {
+    amount: number
+    days: string | null
+    scope: string[]
+    /** 과업내용서 범위 판정. 계약이 없는 프로젝트는 null이고 화면이 이전 그대로다. */
+    verdict: ScopeVerdict | null
+    clientNote: string | null
+    coveredAmount: number | null
+    basis: ScopeBasis[]
+    coveredTasks: string[]
+    billableTasks: string[]
+  } | null
 }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
@@ -151,13 +167,32 @@ export function Thread({
       {quote && (
         <div className="card est">
           <div className="est-head">
-            <span className="t">확정 견적</span>
-            <span className="note">승인하면 개발이 시작돼요</span>
+            <span className="t">
+              {quote.verdict === 'included' ? '추가 비용 없이 진행돼요' : '확정 견적'}
+            </span>
+            <span className="note">
+              {quote.verdict === 'included'
+                ? '승인하면 개발이 시작돼요'
+                : quote.verdict === 'partial'
+                  ? '계약에 없던 부분만 비용이 들어요'
+                  : '승인하면 개발이 시작돼요'}
+            </span>
           </div>
+
+          {quote.clientNote && (
+            <p className="cs" style={{ marginBottom: 12 }}>
+              {quote.clientNote}
+            </p>
+          )}
+
           <div className="figures">
             <div className="fig">
-              <div className="k">확정 비용</div>
-              <div className="v">₩{quote.amount.toLocaleString('ko-KR')}</div>
+              <div className="k">{quote.verdict === 'partial' ? '추가 비용' : '확정 비용'}</div>
+              <div className="v">
+                {quote.verdict === 'included'
+                  ? '추가 비용 없음'
+                  : `₩${quote.amount.toLocaleString('ko-KR')}`}
+              </div>
             </div>
             <div className="fig">
               <div className="k">예상 기간</div>
@@ -168,24 +203,60 @@ export function Thread({
               <div className="v">기능 {quote.scope.length}건</div>
             </div>
           </div>
-          {quote.scope.length > 0 && (
-            <div className="scope">
-              <p className="sk">포함되는 작업</p>
-              {quote.scope.map((s, i) => (
-                <div className="scope-item" key={i}>
-                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                  {s}
+
+          {/* 일부만 포함일 때는 두 블록으로 갈라 그린다 — 섞으면 무엇이 유료인지 안 보인다 */}
+          {quote.verdict === 'partial' ? (
+            <>
+              {quote.coveredTasks.length > 0 && (
+                <div className="scope">
+                  <p className="sk">계약에 포함된 부분 — 추가 비용 없음</p>
+                  {quote.coveredTasks.map((s, i) => (
+                    <div className="scope-item" key={i}>
+                      <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                      {s}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+              {quote.billableTasks.length > 0 && (
+                <div className="scope" style={{ marginTop: 12 }}>
+                  <p className="sk">계약에 없던 새 작업 — 별도 비용</p>
+                  {quote.billableTasks.map((s, i) => (
+                    <div className="scope-item" key={i}>
+                      <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                      {s}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            quote.scope.length > 0 && (
+              <div className="scope">
+                <p className="sk">포함되는 작업</p>
+                {quote.scope.map((s, i) => (
+                  <div className="scope-item" key={i}>
+                    <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    {s}
+                  </div>
+                ))}
+              </div>
+            )
           )}
+
+          {quote.basis.length > 0 && <ScopeBasisBlock basis={quote.basis} />}
+
           {/* 견적 자체는 관리자에게도 보인다. 누르는 것만 클라이언트의 몫이다 (§7 이중 게이트) */}
           {canAct && (
             <div className="est-actions">
               <button className="btn btn-primary" onClick={approveQuote} disabled={pending}>
-                견적 승인하고 진행
+                {quote.verdict === 'included' ? '이 내용으로 진행하기' : '견적 승인하고 진행'}
               </button>
             </div>
           )}
@@ -277,6 +348,59 @@ function AgentCard({
             <span className="ct">확인이 필요해요</span> — 담당 매니저가 확인한 뒤 다시
             알려드릴게요.
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * 판정 근거 — 과업내용서 원문을 그대로 보여준다.
+ *
+ * 문장을 조립하지 않고 원문을 찍는다. 이 기능이 분쟁을 막는 방식이
+ * "우리가 이렇게 판단했습니다"가 아니라 "계약서에 이렇게 적혀 있습니다"이기 때문이다.
+ *
+ * 제외 범위에 걸린 근거는 접지 않고 펼쳐둔다 — 계약할 때 명시적으로 뺀 항목이라는
+ * 사실이 클라이언트가 알아야 할 것 중 가장 중요하다.
+ */
+function ScopeBasisBlock({ basis }: { basis: ScopeBasis[] }) {
+  const hasExcluded = basis.some((b) => b.reason === 'excluded')
+  const [open, setOpen] = useState(hasExcluded)
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <button
+        className="btn"
+        style={{ fontSize: 13, padding: '6px 12px' }}
+        onClick={() => setOpen(!open)}
+      >
+        {open ? '근거 접기' : '어디에 그렇게 적혀 있나요?'}
+      </button>
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          {basis.map((b, i) => (
+            <div
+              key={i}
+              style={{
+                borderLeft: '3px solid var(--line)',
+                paddingLeft: 12,
+                marginBottom: 12,
+              }}
+            >
+              <p className="qs" style={{ marginBottom: 4 }}>
+                {b.sow}
+                {b.clause && ` · ${b.clause}`}
+                {b.reason === 'excluded' && (
+                  <span className="ftag" style={{ marginLeft: 6 }}>
+                    제외 범위
+                  </span>
+                )}
+              </p>
+              <p className="body" style={{ margin: 0 }}>
+                {b.quote}
+              </p>
+            </div>
+          ))}
         </div>
       )}
     </div>

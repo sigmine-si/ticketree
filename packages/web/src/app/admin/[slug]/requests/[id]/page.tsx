@@ -138,6 +138,11 @@ export default async function ReviewPage({
                     <span>
                       {w.task}
                       {w.repo && <span className="ftag" style={{ marginLeft: 6 }}>{w.repo}</span>}
+                      {w.covered && (
+                        <span className="ftag" style={{ marginLeft: 6 }}>
+                          계약 포함{w.sow_clause ? ` · ${w.sow_clause}` : ''}
+                        </span>
+                      )}
                     </span>
                     <span className="h">{w.hours}h</span>
                   </div>
@@ -151,6 +156,50 @@ export default async function ReviewPage({
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* 판정과 근거를 여기 안 띄우면 관리자 조정 게이트가 실제로는 작동하지 않는다 */}
+            {estimate?.scopeVerdict && (
+              <div className="card">
+                <p className="ch">범위 판정</p>
+                <p className="cs">
+                  {estimate.scopeVerdict === 'included'
+                    ? '계약 범위 안 — 청구하지 않음'
+                    : estimate.scopeVerdict === 'partial'
+                      ? '일부만 계약 범위 — 초과분만 청구'
+                      : '계약 범위 밖 — 전액 청구'}
+                  {estimate.coveredAmount != null &&
+                    estimate.coveredAmount > 0 &&
+                    ` · 계약 커버분 ${formatKrw(estimate.coveredAmount)}`}
+                </p>
+                {estimation?.scope?.admin_note && (
+                  <p className="note" style={{ marginBottom: 10 }}>
+                    {estimation.scope.admin_note}
+                  </p>
+                )}
+                {(estimation?.scope?.basis ?? []).map((b, i) => (
+                  <div key={i} className="qa">
+                    <p className="q">
+                      {b.sow}
+                      {b.clause && ` · ${b.clause}`}
+                      <span className="ftag" style={{ marginLeft: 6 }}>
+                        {b.reason === 'in_scope'
+                          ? '범위 내'
+                          : b.reason === 'excluded'
+                            ? '제외 범위'
+                            : '해당 없음'}
+                      </span>
+                    </p>
+                    <p className="a">{b.quote}</p>
+                  </div>
+                ))}
+                {estimate.scopeOverriddenBy && (
+                  <p className="margin-note">
+                    관리자가 판정을 조정했어요
+                    {estimate.scopeOverrideNote ? ` — ${estimate.scopeOverrideNote}` : ''}
+                  </p>
                 )}
               </div>
             )}

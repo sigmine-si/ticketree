@@ -17,6 +17,7 @@ import {
   projects,
   parseIntakeResult,
   policyForJob,
+  requestTag,
   transition,
   type Db,
   type IntakeResult,
@@ -56,12 +57,17 @@ export async function runIntakeJob(db: Db, job: ClaimedJob): Promise<JobOutcome>
     .orderBy(desc(agentSessions.startedAt))
     .limit(1)
 
+  // 발효 중인 계약이 있으면 첫 라운드에 알려준다. 러너가 경로를 주고 본문은
+  // 에이전트가 읽는다 — 출력 계약에는 필드를 더하지 않으므로 라운드 지연이 안 늘어난다.
+  const sowNote = isFirstRound ? await activeSowNote(db, job.projectId) : null
+
   const prompt = isFirstRound
     ? firstRoundPrompt({
         asIs: request.asIs,
         toBe: request.toBe,
         urgency: request.urgency,
         attachmentNote: null,
+        sowNote,
       })
     : await buildResumePrompt(db, request.id)
 
@@ -283,6 +289,29 @@ export async function buildResumePrompt(
     operatorNotes,
     closing,
   })
+}
+
+/** 발효 중인 계약의 본문 경로 목록. 없으면 null이라 프롬프트에 아무것도 안 붙는다. */
+async function activeSowNote(db: Db, projectId: string): Promise<string | null> {
+  const rows = await db
+    .select({ reqNo: changeRequests.reqNo, title: changeRequests.title })
+    .from(changeRequests)
+    .where(
+      and(
+        eq(changeRequests.projectId, projectId),
+        eq(changeRequests.kind, 'sow'),
+        eq(changeRequests.status, 'sow_active'),
+      ),
+    )
+    .orderBy(changeRequests.reqNo)
+
+  if (rows.length === 0) return null
+  return rows
+    .map((r) => {
+      const tag = requestTag('sow', r.reqNo)
+      return `- ${tag} ${r.title ?? ''} — \`specs/contracts/${tag}.md\``
+    })
+    .join('\n')
 }
 
 /** 아직 답이 안 온 질문이 있는지 — 라운드 종료 판정에 쓴다 (§16-2). */

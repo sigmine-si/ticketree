@@ -28,6 +28,7 @@ export interface Row {
   roughMin: number | null
   roughMax: number | null
   finalAmount: number | null
+  scopeVerdict: string | null
   runningStatusText: string | null
 }
 
@@ -225,7 +226,10 @@ function RequestRow({ row, onOpen }: { row: Row; onOpen: () => void }) {
         )}
       </td>
       <td className="r amt">
-        {row.finalAmount != null ? (
+        {/* 계약 범위 내라 0원인 것과 아직 안 나온 것은 다르다 */}
+        {row.scopeVerdict === 'included' ? (
+          <span className="pill green">추가 비용 없음</span>
+        ) : row.finalAmount != null ? (
           `₩${row.finalAmount.toLocaleString('ko-KR')}`
         ) : row.roughMin != null && row.roughMax != null ? (
           <span className="range">
