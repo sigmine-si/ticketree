@@ -81,6 +81,9 @@ export function Thread({
 }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
+  /** null이면 닫힘. 범위 판정에 이견이 있을 때만 연다. */
+  const [dispute, setDispute] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   // 진행 중일 때만 폴링한다 — 끝난 요청까지 계속 두드릴 이유가 없다
   useEffect(() => {
@@ -109,7 +112,25 @@ export function Thread({
 
   async function approveQuote() {
     setPending(true)
-    await fetch(`/api/requests/${requestId}/approve-quote`, { method: 'POST' })
+    const res = await fetch(`/api/requests/${requestId}/approve-quote`, { method: 'POST' })
+    if (!res.ok) setError(((await res.json()) as { error?: string }).error ?? '처리하지 못했어요')
+    router.refresh()
+    setPending(false)
+  }
+
+  async function sendDispute() {
+    if (!dispute?.trim()) return
+    setPending(true)
+    const res = await fetch(`/api/requests/${requestId}/dispute-scope`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: dispute.trim() }),
+    })
+    if (!res.ok) {
+      setError(((await res.json()) as { error?: string }).error ?? '보내지 못했어요')
+    } else {
+      setDispute(null)
+    }
     router.refresh()
     setPending(false)
   }
@@ -252,11 +273,47 @@ export function Thread({
 
           {quote.basis.length > 0 && <ScopeBasisBlock basis={quote.basis} />}
 
+          {error && (
+            <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{error}</p>
+          )}
+
           {/* 견적 자체는 관리자에게도 보인다. 누르는 것만 클라이언트의 몫이다 (§7 이중 게이트) */}
           {canAct && (
             <div className="est-actions">
               <button className="btn btn-primary" onClick={approveQuote} disabled={pending}>
                 {quote.verdict === 'included' ? '이 내용으로 진행하기' : '견적 승인하고 진행'}
+              </button>
+              {/*
+                판정에 반박할 통로가 없으면 분쟁을 막은 게 아니라 일방 통보로 바꾼 것이다.
+                그러면 분쟁은 플랫폼 밖으로 나가고 기록이 안 남는다.
+              */}
+              {quote.verdict !== null && quote.verdict !== 'included' && (
+                <button
+                  className="btn"
+                  disabled={pending}
+                  onClick={() => setDispute(dispute === null ? '' : null)}
+                >
+                  계약에 포함된 것 같아요
+                </button>
+              )}
+            </div>
+          )}
+
+          {canAct && dispute !== null && (
+            <div className="redo-box" style={{ marginTop: 12 }}>
+              <textarea
+                className="redo-input"
+                rows={3}
+                value={dispute}
+                onChange={(e) => setDispute(e.target.value)}
+                placeholder="어느 부분이 계약에 포함되어 있다고 보시는지 알려주세요 — 담당 매니저가 계약서와 대조해 다시 안내드려요"
+              />
+              <button
+                className="btn btn-primary"
+                disabled={pending || !dispute.trim()}
+                onClick={sendDispute}
+              >
+                보내기
               </button>
             </div>
           )}

@@ -4,6 +4,8 @@ import { formatKrw, usdToKrw } from '@ticketree/shared/money'
 import type { RequestFlag, RequestStatus } from '@ticketree/shared/status'
 import { requestTag, type RequestKind } from '@ticketree/shared/kind'
 import { SowCard } from '@/components/SowCard'
+import { ScopeOverride } from '@/components/ScopeOverride'
+import type { ScopeVerdict } from '@ticketree/shared/agent-io'
 import { getSession } from '@/lib/session'
 import { getReviewDetail, ledger, noticeItems } from '@/lib/admin'
 import { adminPath } from '@/lib/routes'
@@ -262,7 +264,19 @@ export default async function ReviewPage({
                 migration={detail.migration}
               />
             ) : (
-              <div className="card">
+              <>
+                {/* 클라이언트가 승인하기 전에만 열린다 — 승인 뒤에 바꾸면 번복이다 */}
+                {(status === 'quote_ready' || status === 'estimating') && estimate && (
+                  <ScopeOverride
+                    requestId={request.id}
+                    verdict={(estimate.scopeVerdict as ScopeVerdict | null) ?? null}
+                    proposedAmount={estimate.proposedAmount}
+                    coveredAmount={estimate.coveredAmount}
+                    clientNote={estimate.scopeClientNote}
+                    disputed={flag === 'on_hold'}
+                  />
+                )}
+                <div className="card">
                 <p className="ch">견적</p>
                 <div className="est-figs">
                   <div className="efrow">
@@ -285,7 +299,8 @@ export default async function ReviewPage({
                 <p className="margin-note">
                   지금은 결정할 것이 없어요 — {DECISION_LABEL[decision]}
                 </p>
-              </div>
+                </div>
+              </>
             )}
 
             <div className="card">

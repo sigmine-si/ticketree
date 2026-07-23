@@ -91,7 +91,8 @@ export function isClientTurn(status: RequestStatus): boolean {
 export const FLAG_CLIENT_NOTE: Partial<Record<RequestFlag, string>> = {
   escalated: '담당 매니저가 확인하고 있어요',
   failed: '확인 중이에요 — 잠시만 기다려주세요',
-  on_hold: '보류 중이에요',
+  // 지금 on_hold를 붙이는 곳은 범위 판정 이의 제기 하나뿐이다
+  on_hold: '알려주신 내용을 담당 매니저가 확인하고 있어요',
   cancelled: '취소된 요청이에요',
 }
 

@@ -43,6 +43,8 @@ export function decisionOf(
 ): Decision {
   // 에이전트가 멈춰 세운 건이 가장 급하다 — 이건 아무도 대신 못 푼다
   if (flag === 'escalated') return 'answer'
+  // 클라이언트가 범위 판정에 이견을 냈다. 사람만 풀 수 있고, 그동안 승인이 잠긴다.
+  if (flag === 'on_hold') return 'answer'
   if (status === 'client_approved') return 'spec'
   if (status === 'in_review' || status === 'awaiting_manual_deploy') return 'deploy'
   if (hasRunningJob) return 'running'

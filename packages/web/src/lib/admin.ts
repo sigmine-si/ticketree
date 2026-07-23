@@ -140,6 +140,7 @@ function adminNote(
   kind: RequestKind = 'change',
 ): string {
   if (flag === 'escalated') return '에이전트 질문 — 해석이 필요합니다'
+  if (flag === 'on_hold') return '클라이언트가 범위 판정에 이견을 냈습니다'
   if (flag === 'failed') return 'job 실패 — 재시도 후에도 실패'
   if (statusText) return statusText
   if (kind === 'sow') {
@@ -198,6 +199,7 @@ export const NOTICE_LABEL: Record<string, string> = {
   escalated: '담당자가 막혔어요 — 답변이 필요해요',
   job_failed: '작업이 실패했어요',
   sow_active: '과업내용서가 발효됐어요 — 이제 이 범위로 요청을 받습니다',
+  scope_disputed: '클라이언트가 범위 판정에 이견을 냈어요 — 확인이 필요합니다',
 }
 
 /**
