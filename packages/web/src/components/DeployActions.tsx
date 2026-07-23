@@ -16,16 +16,21 @@ export function DeployActions({
   stage,
   prNumber,
   previewUrl,
+  migration,
 }: {
   requestId: string
   stage: 'in_review' | 'awaiting_manual_deploy'
   prNumber: number | null
   previewUrl: string | null
+  /** 이 배포에 DB 반영이 따라와야 하는가. 플랫폼은 실행하지 않고 막기만 한다 (§16-6) */
+  migration: { required: boolean; command: string }
 }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState(previewUrl ?? '')
+  /** 스키마가 바뀐 배포는 반영을 확인하기 전까지 완료로 표시할 수 없다 */
+  const [migrated, setMigrated] = useState(false)
 
   async function call(body: Record<string, unknown>) {
     setBusy(true)
@@ -108,6 +113,12 @@ export function DeployActions({
                 ? '코드 PR이 준비되면 승인할 수 있어요'
                 : `승인하면 PR #${prNumber}가 머지됩니다. manual 배포라 그 뒤 실제 배포는 운영자가 진행해요`}
             </p>
+            {migration.required && (
+              <p className="approve-note">
+                이 변경은 <strong>DB 스키마를 건드립니다</strong> — 배포할 때{' '}
+                <code>{migration.command}</code>를 함께 돌려야 해요
+              </p>
+            )}
           </div>
         </>
       ) : (
@@ -116,9 +127,33 @@ export function DeployActions({
             코드는 이미 머지됐어요. 실제 배포를 마쳤다면 완료로 표시하세요 — 명세의 예정 항목이
             정식으로 반영됩니다.
           </p>
+          {migration.required && (
+            <div className="callout" style={{ marginBottom: 12 }}>
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
+                <path d="M12 9v4M12 17h.01" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+              <div>
+                <span className="ct">DB 반영 필요</span> — 이 변경은 스키마를 바꿉니다. 배포한
+                곳에서 <code>{migration.command}</code>를 돌리지 않으면 앱이 뜨지 않아요.
+                <label className="migrate-check">
+                  <input
+                    type="checkbox"
+                    checked={migrated}
+                    onChange={(e) => setMigrated(e.target.checked)}
+                  />
+                  반영을 마쳤습니다
+                </label>
+              </div>
+            </div>
+          )}
           {error && <p style={{ color: 'var(--red)', fontSize: 13 }}>{error}</p>}
           <div className="side-actions">
-            <button className="btn btn-primary" disabled={busy} onClick={() => void markDone()}>
+            <button
+              className="btn btn-primary"
+              disabled={busy || (migration.required && !migrated)}
+              onClick={() => void markDone()}
+            >
               배포 완료로 표시
             </button>
             <p className="approve-note">

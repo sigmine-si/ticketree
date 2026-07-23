@@ -8,13 +8,15 @@ import { and, eq } from 'drizzle-orm'
 import {
   changeRequests,
   enqueueJob,
+  logEvent,
+  pendingNotices,
   projects,
   pullRequests,
   specVersions,
   transition,
   type Db,
 } from '@ticketree/shared'
-import { mergePr, syncMain } from '../git.js'
+import { mergePr, syncBranchWithMain, syncMain } from '../git.js'
 import type { ClaimedJob, JobOutcome } from '../queue.js'
 
 const SYSTEM = { kind: 'system' as const }
@@ -42,6 +44,32 @@ export async function runSpecMergeJob(db: Db, job: ClaimedJob): Promise<JobOutco
       ),
     )
   if (!pr) throw new Error('머지할 Spec PR이 없습니다')
+
+  // PR을 만든 뒤 main이 움직였을 수 있다. 겹치지 않으면 여기서 풀리고,
+  // 진짜 충돌이면 사람에게 넘긴다 — 러너가 한쪽을 고르면 승인된 것과 다른 게 머지된다.
+  if (!(await syncBranchWithMain(project.workspacePath, pr.branch ?? `spec/REQ-${String(request.reqNo).padStart(3, '0')}`))) {
+    await db
+      .update(changeRequests)
+      .set({
+        flag: 'escalated',
+        flagFromStatus: request.status,
+        yourTurn: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(changeRequests.id, request.id))
+    await db.insert(pendingNotices).values({ requestId: request.id, type: 'escalated' })
+    await logEvent(db, request.id, SYSTEM, {
+      specMergeConflict: pr.prNumber,
+      note: '승인된 명세안이 최신 main과 충돌합니다. 브랜치에서 직접 풀어야 합니다.',
+    })
+    return {
+      status: 'done',
+      result: { prNumber: pr.prNumber, merged: false, conflict: true } as never,
+      tokensIn: 0,
+      tokensOut: 0,
+      costUsd: 0,
+    }
+  }
 
   await mergePr(project.workspacePath, pr.prNumber)
 

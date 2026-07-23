@@ -17,6 +17,8 @@ import {
   type IntakeResult,
   type RequestFlag,
   type RequestStatus,
+  migrateCommandOf,
+  needsMigration,
 } from '@ticketree/shared'
 import { db } from './data'
 import { decisionOf, DECISION_ORDER, type Decision } from './decision'
@@ -217,6 +219,8 @@ export interface ReviewDetail {
   specPr: PrView | null
   /** 코드 PR — in_review 이후 배포 검토의 근거. */
   codePr: (PrView & { previewUrl: string | null }) | null
+  /** 이 배포에 DB 반영이 따라와야 하는가 (§16-6 — 실행은 운영자가 한다) */
+  migration: { required: boolean; command: string }
 }
 
 export interface PrView {
@@ -329,6 +333,10 @@ export async function getReviewDetail(requestId: string): Promise<ReviewDetail |
           previewUrl: codePr.previewUrl,
         }
       : null,
+    migration: {
+      required: needsMigration(project?.settings, codePr?.diff ?? null),
+      command: migrateCommandOf(project?.settings),
+    },
   }
 }
 

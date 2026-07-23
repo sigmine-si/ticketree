@@ -7,13 +7,14 @@
 import { and, eq } from 'drizzle-orm'
 import {
   changeRequests,
+  logEvent,
   pendingNotices,
   projects,
   pullRequests,
   transition,
   type Db,
 } from '@ticketree/shared'
-import { mergePr, syncMain } from '../git.js'
+import { mergePr, syncBranchWithMain, syncMain } from '../git.js'
 import type { ClaimedJob, JobOutcome } from '../queue.js'
 
 const SYSTEM = { kind: 'system' as const }
@@ -42,7 +43,31 @@ export async function runDeployJob(db: Db, job: ClaimedJob): Promise<JobOutcome>
     )
   if (!pr) throw new Error('머지할 코드 PR이 없습니다')
 
-  // 멀티 repo면 repos.yml 의존 순서대로 머지하지만, MVP는 단일 저장소다 (§16-12)
+  // 명세 PR과 같은 이유로 먼저 main에 맞춘다 (§16-12: MVP는 단일 저장소)
+  if (!(await syncBranchWithMain(project.workspacePath, pr.branch ?? `dev/REQ-${String(request.reqNo).padStart(3, '0')}`))) {
+    await db
+      .update(changeRequests)
+      .set({
+        flag: 'escalated',
+        flagFromStatus: request.status,
+        yourTurn: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(changeRequests.id, request.id))
+    await db.insert(pendingNotices).values({ requestId: request.id, type: 'escalated' })
+    await logEvent(db, request.id, SYSTEM, {
+      deployConflict: pr.prNumber,
+      note: '코드 PR이 최신 main과 충돌합니다. 브랜치에서 직접 풀어야 합니다.',
+    })
+    return {
+      status: 'done',
+      result: { prNumber: pr.prNumber, merged: false, conflict: true } as never,
+      tokensIn: 0,
+      tokensOut: 0,
+      costUsd: 0,
+    }
+  }
+
   await mergePr(project.workspacePath, pr.prNumber)
   await syncMain(project.workspacePath)
 

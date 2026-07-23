@@ -200,6 +200,7 @@ export default async function ReviewPage({
                 stage={status}
                 prNumber={codePr?.number ?? null}
                 previewUrl={codePr?.previewUrl ?? null}
+                migration={detail.migration}
               />
             ) : (
               <div className="card">

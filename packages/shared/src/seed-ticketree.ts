@@ -23,6 +23,10 @@ const WS = join(ROOT, 'workspaces', SLUG)
 /** 모노레포다. 구현 job이 커밋해도 되는 경로 (§9 projects.settings). */
 const CODE_PATHS = ['packages', 'scripts', 'digest.md', 'README.md']
 
+/** 이 경로가 바뀌면 배포에 DB 반영이 따라와야 한다. 배포 화면이 이걸로 막는다. */
+const MIGRATION_PATHS = ['packages/shared/src/db/schema.ts']
+const MIGRATE_COMMAND = 'pnpm db:push'
+
 function git(cwd: string, ...args: string[]): string {
   return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim()
 }
@@ -62,7 +66,11 @@ async function seedDb(): Promise<void> {
         workspacePath: WS,
         hubRepo: REPO,
         status: 'active',
-        settings: { codePaths: CODE_PATHS },
+        settings: {
+          codePaths: CODE_PATHS,
+          migrationPaths: MIGRATION_PATHS,
+          migrateCommand: MIGRATE_COMMAND,
+        },
       })
       .where(eq(projects.id, existing.id))
     console.log(`project ${SLUG}: updated (${existing.id})`)
@@ -80,7 +88,11 @@ async function seedDb(): Promise<void> {
       hubRepo: REPO,
       workspacePath: WS,
       deployAdapter: 'manual',
-      settings: { codePaths: CODE_PATHS },
+      settings: {
+        codePaths: CODE_PATHS,
+        migrationPaths: MIGRATION_PATHS,
+        migrateCommand: MIGRATE_COMMAND,
+      },
     })
     .returning({ id: projects.id })
 

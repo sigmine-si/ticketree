@@ -139,6 +139,35 @@ export async function syncMain(cwd: string): Promise<void> {
 }
 
 /**
+ * 작업 브랜치를 최신 main에 맞춘다. PR을 만든 뒤 main이 움직이면 머지가 막힌다 —
+ * 요청이 여러 개 동시에 돌면 반드시 일어나는 일이다.
+ *
+ * 겹치지 않는 변경은 여기서 조용히 풀린다(파일이 다르거나 줄이 다른 경우).
+ * 같은 줄이 양쪽에서 바뀐 진짜 충돌만 false로 돌려보내 사람에게 넘긴다 —
+ * 러너가 임의로 한쪽을 고르면 승인된 내용과 다른 것이 머지된다.
+ */
+export async function syncBranchWithMain(cwd: string, branch: string): Promise<boolean> {
+  await git(cwd, 'fetch', '--prune', 'origin').catch(() => {})
+  await git(cwd, 'fetch', 'origin', 'main')
+  await git(cwd, 'checkout', branch)
+  await git(cwd, 'reset', '--hard', `origin/${branch}`)
+
+  try {
+    await git(cwd, 'merge', '--no-edit', 'origin/main')
+  } catch {
+    // 작업 트리를 충돌 상태로 남기지 않는다 — 다음 job이 여기서 시작한다
+    await git(cwd, 'merge', '--abort').catch(() => {})
+    await git(cwd, 'checkout', 'main').catch(() => {})
+    return false
+  }
+
+  // 머지 커밋이 생겼으면 올린다. 아무것도 안 바뀌었으면 push는 no-op이다.
+  await git(cwd, 'push', 'origin', `${branch}:${branch}`)
+  await git(cwd, 'checkout', 'main').catch(() => {})
+  return true
+}
+
+/**
  * PR을 닫는다. 머지가 아니라 폐기다 — 명세를 다시 쓸 때 옛 PR을 정리한다.
  * 브랜치도 같이 지운다. 다음 시도가 깨끗한 브랜치에서 시작해야 한다.
  */

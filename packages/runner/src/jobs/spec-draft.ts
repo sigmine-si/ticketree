@@ -171,6 +171,12 @@ export async function runSpecDraftJob(db: Db, job: ClaimedJob): Promise<JobOutco
       .update(pullRequests)
       .set({ status: 'closed' })
       .where(eq(pullRequests.id, stale.id))
+    // 폐기된 명세안의 버전 행도 함께 접는다. 안 그러면 spec_merge가 requestId만 보고
+    // 이 행까지 merged로 바꿔, 머지된 적 없는 기능이 명세 이력에 남는다.
+    await db
+      .update(specVersions)
+      .set({ status: 'superseded' })
+      .where(and(eq(specVersions.requestId, request.id), eq(specVersions.status, 'proposed')))
   }
 
   // 러너가 브랜치를 연다 — 에이전트는 git을 만지지 않는다
