@@ -179,7 +179,12 @@ export interface FeatureSpec {
   pendingReqTags: string[]
 }
 
-const PENDING = /^\((?:예정\s*·\s*)?(REQ-\d+)\)\s*/
+/**
+ * `(예정 · REQ-014)` · `(REQ-014)` · `(예정)` 셋 다 받는다.
+ * REQ 없는 `(예정)`은 요청에 아직 묶이지 않은 항목이다 — 목업에서 명세를 먼저 쓰면
+ * 이 형태가 나온다. 번호가 없다고 버리면 화면에 "(예정)"이 글자로 남는다.
+ */
+const PENDING = /^\((?:예정(?:\s*·\s*(REQ-\d+))?|(REQ-\d+))\)\s*/
 
 function parseCriterion(line: string): Criterion | null {
   if (!line) return null
@@ -196,7 +201,7 @@ function parseCriterion(line: string): Criterion | null {
   let reqTag: string | null = null
   const p = text.match(PENDING)
   if (p) {
-    reqTag = p[1]!
+    reqTag = p[1] ?? p[2] ?? null
     text = text.slice(p[0].length).trim()
   }
   return { text, mark, reqTag }

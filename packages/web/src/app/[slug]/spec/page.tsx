@@ -155,8 +155,10 @@ export default async function SpecPage({
                         )}
                         <span>
                           <InlineText text={c.text} />
-                          {c.mark === 'pending' && c.reqTag && (
-                            <span className="tag">예정 · {c.reqTag}</span>
+                          {c.mark === 'pending' && (
+                            <span className="tag">
+                              {c.reqTag ? `예정 · ${c.reqTag}` : '예정'}
+                            </span>
                           )}
                         </span>
                       </div>
