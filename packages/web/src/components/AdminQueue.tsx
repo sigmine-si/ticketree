@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatKrw, usdToKrw } from '@ticketree/shared/money'
 import { DECISION_LABEL, DECISION_TONE, type Decision } from '@/lib/decision'
+import { adminPath } from '@/lib/routes'
 
 export interface QueueRowView {
   id: string
@@ -11,6 +12,8 @@ export interface QueueRowView {
   title: string | null
   projectName: string
   clientName: string
+  /** 상세 주소를 만든다 — /admin/{slug}/requests/{id} */
+  projectSlug: string
   decision: Decision
   note: string
   updatedAt: string
@@ -97,8 +100,10 @@ export function AdminQueue({ rows }: { rows: QueueRowView[] }) {
                 <tr
                   key={r.id}
                   tabIndex={0}
-                  onClick={() => router.push(`/admin/requests/${r.id}`)}
-                  onKeyDown={(e) => e.key === 'Enter' && router.push(`/admin/requests/${r.id}`)}
+                  onClick={() => router.push(adminPath.request(r.projectSlug, r.id))}
+                  onKeyDown={(e) =>
+                    e.key === 'Enter' && router.push(adminPath.request(r.projectSlug, r.id))
+                  }
                 >
                   <td className="tno">REQ-{String(r.reqNo ?? 0).padStart(3, '0')}</td>
                   <td className="proj-cell">
