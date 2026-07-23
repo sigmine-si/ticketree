@@ -4,6 +4,7 @@ import { formatKrw, usdToKrw } from '@ticketree/shared/money'
 import type { RequestFlag, RequestStatus } from '@ticketree/shared/status'
 import { getSession } from '@/lib/session'
 import { getReviewDetail, ledger } from '@/lib/admin'
+import { adminPath } from '@/lib/routes'
 import { decisionOf, DECISION_LABEL } from '@/lib/decision'
 import { AdminTopBar } from '@/components/AdminTopBar'
 import { ReviewActions } from '@/components/ReviewActions'
@@ -13,13 +14,20 @@ import { SpecDiff } from '@/components/SpecDiff'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReviewPage({
+  params,
+}: {
+  params: Promise<{ slug: string; id: string }>
+}) {
   const session = await getSession()
   if (session?.kind !== 'admin') redirect('/admin/login')
 
-  const { id } = await params
+  const { slug, id } = await params
   const [detail, l] = await Promise.all([getReviewDetail(id), ledger()])
   if (!detail) notFound()
+  // 주소의 프로젝트와 요청의 프로젝트가 어긋나면 없는 주소다 — 잘못된 링크가
+  // 그럴듯한 화면을 띄우면 어느 프로젝트 건인지 착각한 채 승인하게 된다
+  if (detail.project.slug !== slug) notFound()
 
   const { request, project, intake, estimation, estimate, qa, jobs, similar, specPr, codePr } =
     detail
@@ -32,7 +40,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
     <>
       <AdminTopBar userName={session.name} running={l.running} queued={l.queued} />
       <main className="wrap admin">
-        <Link className="back" href="/admin">
+        <Link className="back" href={adminPath.queue}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>

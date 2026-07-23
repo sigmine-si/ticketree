@@ -35,6 +35,7 @@ export function Thread({
   clientName,
   projectName,
   busy,
+  canAct = true,
   canConfirm,
   quote,
 }: {
@@ -43,6 +44,11 @@ export function Thread({
   clientName: string
   projectName: string
   busy: boolean
+  /**
+   * false면 관리자 열람 — 답변·확정·견적 승인을 숨긴다 (specs/overview.md 주소 규약).
+   * 자물쇠가 아니라 정직함이다. 실제 차단은 API의 requireClient가 한다.
+   */
+  canAct?: boolean
   canConfirm: boolean
   /** quote_ready일 때만 채워진다 — 확정 견적과 승인 버튼 (§7 이중 게이트의 첫 번째) */
   quote: { amount: number; days: string | null; scope: string[] } | null
@@ -100,6 +106,7 @@ export function Thread({
             m={m}
             projectName={projectName}
             onAnswer={answer}
+            canAct={canAct}
             disabled={pending || busy}
           />
         ),
@@ -112,7 +119,7 @@ export function Thread({
         </div>
       )}
 
-      {canConfirm && (
+      {canConfirm && canAct && (
         <div className="card">
           <div className="est-actions" style={{ marginTop: 0 }}>
             <button className="btn btn-primary" onClick={confirm} disabled={pending}>
@@ -155,11 +162,14 @@ export function Thread({
               ))}
             </div>
           )}
-          <div className="est-actions">
-            <button className="btn btn-primary" onClick={approveQuote} disabled={pending}>
-              견적 승인하고 진행
-            </button>
-          </div>
+          {/* 견적 자체는 관리자에게도 보인다. 누르는 것만 클라이언트의 몫이다 (§7 이중 게이트) */}
+          {canAct && (
+            <div className="est-actions">
+              <button className="btn btn-primary" onClick={approveQuote} disabled={pending}>
+                견적 승인하고 진행
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -170,11 +180,13 @@ function AgentCard({
   m,
   projectName,
   onAnswer,
+  canAct,
   disabled,
 }: {
   m: ThreadMessage
   projectName: string
   onAnswer: (q: ThreadQuestion, text: string, optionIdx: number | null) => Promise<void>
+  canAct: boolean
   disabled: boolean
 }) {
   const answered = m.questions.filter((q) => q.answeredAt).length
@@ -200,7 +212,7 @@ function AgentCard({
       </p>
 
       {m.questions.map((q) => (
-        <QuestionBlock key={q.id} q={q} onAnswer={onAnswer} disabled={disabled} />
+        <QuestionBlock key={q.id} q={q} onAnswer={onAnswer} canAct={canAct} disabled={disabled} />
       ))}
 
       {summary && (
@@ -252,13 +264,27 @@ function AgentCard({
 function QuestionBlock({
   q,
   onAnswer,
+  canAct,
   disabled,
 }: {
   q: ThreadQuestion
   onAnswer: (q: ThreadQuestion, text: string, optionIdx: number | null) => Promise<void>
+  canAct: boolean
   disabled: boolean
 }) {
   const [text, setText] = useState('')
+
+  // 관리자 열람 — 무엇을 물었는지는 보여주고, 답하는 자리만 걷는다
+  if (!q.answeredAt && !canAct) {
+    return (
+      <div className="q">
+        <p className="qt">
+          {q.idx + 1}. {q.prompt}
+        </p>
+        <p className="qs">클라이언트 답변을 기다리는 중이에요</p>
+      </div>
+    )
+  }
 
   if (q.answeredAt) {
     return (

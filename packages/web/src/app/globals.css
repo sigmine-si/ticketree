@@ -78,6 +78,8 @@ button {
 .nav-link:hover { background: var(--page); }
 .nav-link.on { color: var(--ink); font-weight: 600; background: var(--page); }
 .top-right { display: flex; align-items: center; gap: 14px; }
+/* 관리자가 클라이언트 화면을 열어봤을 때 — 클라이언트인 척하면 왜 버튼이 없는지 모른다 */
+.viewing { font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; white-space: nowrap; background: var(--page); color: var(--sub); border: 1px solid var(--line); }
 .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--green-tint); color: var(--green-deep); display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 600; }
 
 .wrap { max-width: 1060px; margin: 0 auto; padding: 32px 28px 64px; }
