@@ -106,6 +106,11 @@ export interface AnswerRoundInput {
   /** 에스컬레이션에 대한 운영자의 해석 (§5) */
   operatorNotes?: string[]
   freeText?: string
+  /**
+   * 마지막에 붙일 지시. 답변·운영자 해석을 모으는 부분은 종류를 안 타지만
+   * "무엇을 만들면 끝인가"는 탄다 — 과업내용서 대화가 여기를 갈아끼운다.
+   */
+  closing?: string[]
 }
 
 export function answerRoundPrompt(i: AnswerRoundInput): string {
@@ -130,8 +135,10 @@ export function answerRoundPrompt(i: AnswerRoundInput): string {
 
   parts.push(
     '',
-    '반영해서 확정 가능한지 판단하라. 답변 때문에 코드를 다시 봐야 하면 다시 확인하라.',
-    '확정 가능하면 outcome을 ready로 하고 요약과 러프 견적을 내라.',
+    ...(i.closing ?? [
+      '반영해서 확정 가능한지 판단하라. 답변 때문에 코드를 다시 봐야 하면 다시 확인하라.',
+      '확정 가능하면 outcome을 ready로 하고 요약과 러프 견적을 내라.',
+    ]),
   )
   return parts.join('\n')
 }

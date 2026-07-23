@@ -183,11 +183,16 @@ export async function runIntakeJob(db: Db, job: ClaimedJob): Promise<JobOutcome>
   }
 }
 
-/** 결과에 따라 상태를 옮기고 수동 알림 큐에 쌓는다 (§11). */
-async function applyOutcome(
+/**
+ * 결과에 따라 상태를 옮기고 수동 알림 큐에 쌓는다 (§11).
+ *
+ * 과업내용서 대화도 이걸 그대로 쓴다 — 상태 흐름이 같기 때문이다.
+ * 그래서 IntakeResult 전체가 아니라 실제로 읽는 세 필드만 요구한다.
+ */
+export async function applyOutcome(
   db: Db,
   requestId: string,
-  result: IntakeResult,
+  result: Pick<IntakeResult, 'outcome' | 'questions' | 'escalation'>,
   priorStatus: RequestStatus,
 ): Promise<void> {
   if (result.outcome === 'questions') {
@@ -229,8 +234,14 @@ async function applyOutcome(
  *
  * 라운드를 다시 깨우는 계기는 둘이다 — 클라이언트가 질문에 답했거나(§16-2),
  * 관리자가 에스컬레이션을 해석해줬거나(§5). 둘 다 여기로 들어온다.
+ *
+ * `closing`으로 마지막 지시만 갈아끼우면 과업내용서 대화도 같은 조립을 쓴다.
  */
-async function buildResumePrompt(db: Db, requestId: string): Promise<string> {
+export async function buildResumePrompt(
+  db: Db,
+  requestId: string,
+  closing?: string[],
+): Promise<string> {
   const [latest] = await db
     .select({ id: messages.id, round: messages.round })
     .from(messages)
@@ -270,6 +281,7 @@ async function buildResumePrompt(db: Db, requestId: string): Promise<string> {
   return answerRoundPrompt({
     answers,
     operatorNotes,
+    closing,
   })
 }
 

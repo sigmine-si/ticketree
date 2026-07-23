@@ -23,8 +23,13 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const request = await getRequestById(session.projectId, id)
   if (!request) return NextResponse.json({ error: '요청을 찾을 수 없어요' }, { status: 404 })
 
+  const isSow = request.kind === 'sow'
+
   if (request.status !== 'draft') {
-    return NextResponse.json({ error: '이미 확정된 요청이에요' }, { status: 409 })
+    return NextResponse.json(
+      { error: isSow ? '이미 확정된 과업내용서예요' : '이미 확정된 요청이에요' },
+      { status: 409 },
+    )
   }
 
   // 확정 가능 상태인지 확인한다 — 마지막 에이전트 메시지가 ready여야 한다
@@ -55,11 +60,12 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     .set({ closedAt: new Date() })
     .where(eq(agentSessions.requestId, request.id))
 
-  // 확정 견적 산출 시작 (§2)
+  // 과업내용서는 견적을 타지 않는다 — 곧바로 명세 초안을 만든다.
+  // 그 명세가 머지되면 계약이 발효되고, 거기서 과업내용서의 책임은 끝난다.
   await enqueueJob(db, {
     projectId: session.projectId,
     requestId: request.id,
-    kind: 'estimation',
+    kind: isSow ? 'sow_spec_draft' : 'estimation',
   })
 
   return NextResponse.json({ ok: true, reqNo: request.reqNo })

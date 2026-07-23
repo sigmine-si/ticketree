@@ -16,6 +16,7 @@ import {
   type ClaimedJob,
 } from './queue.js'
 import { runIntakeJob } from './jobs/intake.js'
+import { runSowJob } from './jobs/sow.js'
 import { runEstimationJob } from './jobs/estimation.js'
 import { runSpecDraftJob } from './jobs/spec-draft.js'
 import { runSpecMergeJob } from './jobs/spec-merge.js'
@@ -71,6 +72,9 @@ async function dispatch(job: ClaimedJob): Promise<void> {
     case 'exploration':
     case 'intake_round':
       return void (await finishJob(db, job.id, await runIntakeJob(db, job)))
+    case 'sow_intake':
+    case 'sow_round':
+      return void (await finishJob(db, job.id, await runSowJob(db, job)))
     case 'estimation':
       return void (await finishJob(db, job.id, await runEstimationJob(db, job)))
     case 'spec_draft':
