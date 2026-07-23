@@ -4,7 +4,7 @@
  * 메인은 현황판이 아니라 결정 큐다. 그래서 이 파일의 중심 개념은 status가 아니라
  * "지금 사람이 내려야 하는 결정"이다.
  */
-import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import {
   changeRequests,
   estimates,
@@ -12,6 +12,7 @@ import {
   messages,
   projects,
   pullRequests,
+  users,
   type EstimationResult,
   type IntakeResult,
   type RequestFlag,
@@ -19,6 +20,13 @@ import {
 } from '@ticketree/shared'
 import { db } from './data'
 import { decisionOf, DECISION_ORDER, type Decision } from './decision'
+import {
+  generateInviteToken,
+  generatePin,
+  hashInviteToken,
+  hashPin,
+  MAX_PIN_ATTEMPTS,
+} from './invite'
 
 export { decisionOf, DECISION_LABEL, DECISION_TONE, type Decision } from './decision'
 
@@ -333,4 +341,78 @@ async function collectQa(requestId: string): Promise<Array<{ prompt: string; ans
     order by m.round, q.idx
   `)
   return (rows.rows ?? []).map((r) => ({ prompt: r.prompt, answer: r.answer_text }))
+}
+
+// ─────────────────────────────── 고객 계정 — 초대 링크와 PIN 발급
+
+export interface ClientAccount {
+  userId: string
+  name: string
+  projectName: string
+  slug: string
+  /** 초대 링크를 마지막으로 발급한 시각. 없으면 아직 한 번도 안 냈다. */
+  issuedAt: Date | null
+  /** 5회 연속 실패로 잠긴 상태. 재발급해야만 풀린다. */
+  locked: boolean
+  attemptsLeft: number
+}
+
+export async function listClientAccounts(): Promise<ClientAccount[]> {
+  const rows = await db
+    .select({
+      userId: users.id,
+      name: users.name,
+      projectName: projects.name,
+      slug: projects.slug,
+      issuedAt: users.inviteIssuedAt,
+      hasToken: users.inviteTokenHash,
+      failed: users.pinFailedCount,
+    })
+    .from(users)
+    .innerJoin(projects, eq(users.projectId, projects.id))
+    .where(eq(users.kind, 'client'))
+    .orderBy(asc(projects.name), asc(users.name))
+
+  return rows.map((r) => ({
+    userId: r.userId,
+    name: r.name,
+    projectName: r.projectName,
+    slug: r.slug,
+    issuedAt: r.hasToken ? r.issuedAt : null,
+    locked: r.failed >= MAX_PIN_ATTEMPTS,
+    attemptsLeft: Math.max(0, MAX_PIN_ATTEMPTS - r.failed),
+  }))
+}
+
+/**
+ * 초대 링크와 PIN을 발급한다. 평문은 이 반환값에만 실린다 — 저장은 해시뿐이라
+ * 관리자가 화면을 닫으면 아무도 다시 볼 수 없다.
+ *
+ * 같은 계정에 다시 발급하면 해시를 덮어써서 이전 링크·PIN이 함께 죽는다.
+ * 잠금(연속 실패)이 풀리는 유일한 경로도 여기다.
+ */
+export async function issueInvite(
+  userId: string,
+): Promise<{ token: string; pin: string; slug: string; name: string } | null> {
+  const [target] = await db
+    .select({ id: users.id, name: users.name, slug: projects.slug })
+    .from(users)
+    .innerJoin(projects, eq(users.projectId, projects.id))
+    .where(and(eq(users.id, userId), eq(users.kind, 'client')))
+  if (!target) return null
+
+  const token = generateInviteToken()
+  const pin = generatePin()
+
+  await db
+    .update(users)
+    .set({
+      inviteTokenHash: hashInviteToken(token),
+      pinHash: hashPin(pin),
+      inviteIssuedAt: new Date(),
+      pinFailedCount: 0,
+    })
+    .where(eq(users.id, target.id))
+
+  return { token, pin, slug: target.slug, name: target.name }
 }

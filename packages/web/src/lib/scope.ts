@@ -9,6 +9,7 @@
  */
 import { notFound, redirect } from 'next/navigation'
 import { getProjectBySlug } from './data'
+import { clientPath } from './routes'
 import { getSession, type Session } from './session'
 
 type Project = NonNullable<Awaited<ReturnType<typeof getProjectBySlug>>>
@@ -22,7 +23,7 @@ export interface ProjectAccess {
 
 export async function requireProjectAccess(slug: string): Promise<ProjectAccess> {
   const session = await getSession()
-  if (!session) redirect('/dev-login')
+  if (!session) redirect(clientPath.login)
 
   const project = await getProjectBySlug(slug)
   if (!project) notFound()

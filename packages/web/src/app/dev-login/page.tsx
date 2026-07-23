@@ -1,17 +1,21 @@
 /**
- * 개발용 로그인 — 슬라이스 1 한정.
+ * 개발용 로그인 — **로컬 전용 통로**.
  *
- * 실제 클라이언트 로그인은 초대링크 + PIN이다 (§10). 그 화면은 슬라이스 2에서 만든다.
- * 세션 레이어는 이미 진짜이므로, 여기서 세션을 발급하면 나머지는 그대로 동작한다.
+ * 실제 클라이언트 로그인은 초대 링크 + PIN이다 (`/invite/[token]`).
+ * 이 화면은 로컬에서 로그인 흐름 없이 DB에 들어가는 유일한 문이라 남겨두되,
+ * 실제 서비스에서는 통째로 닫는다 — specs/features/client-login.md.
  */
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { and, eq } from 'drizzle-orm'
 import { projects, users } from '@ticketree/shared'
 import { db } from '@/lib/data'
-import { setSession } from '@/lib/session'
+import { devLoginEnabled, setSession } from '@/lib/session'
 import { clientPath } from '@/lib/routes'
 
 export default async function DevLogin() {
+  // 있다는 사실조차 알리지 않는다. 프로덕션에는 이 주소가 없는 것과 같다.
+  if (!devLoginEnabled()) notFound()
+
   const rows = await db
     .select({
       userId: users.id,
@@ -26,6 +30,8 @@ export default async function DevLogin() {
 
   async function login(formData: FormData) {
     'use server'
+    // 서버 액션은 페이지 렌더와 별개의 요청이다 — 여기서도 다시 막는다
+    if (!devLoginEnabled()) notFound()
     const userId = String(formData.get('userId'))
     const [u] = await db
       .select({
@@ -48,7 +54,7 @@ export default async function DevLogin() {
         <div>
           <h1>개발용 로그인</h1>
           <p className="sub">
-            슬라이스 1 임시 화면이에요 — 실제 로그인은 초대링크 + PIN입니다
+            로컬 전용 통로예요 — 실제 로그인은 초대 링크 + PIN입니다
           </p>
         </div>
       </div>
