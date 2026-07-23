@@ -163,6 +163,20 @@ export const implementationResultSchema = z.object({
 })
 export type ImplementationResult = z.infer<typeof implementationResultSchema>
 
+/** 온보딩 결과 — 요청이 아니라 프로젝트를 세우는 job이라 계약이 따로다 (§12). */
+export const onboardingResultSchema = z.object({
+  /** 정리한 기능 명세 파일들 (확장자 없이) */
+  features: z.array(z.string()).default([]),
+  summary: z.string().default(''),
+  /** 코드만 봐서는 알 수 없어 사람 확인이 필요한 것 */
+  unknowns: z.array(z.string()).default([]),
+})
+export type OnboardingResult = z.infer<typeof onboardingResultSchema>
+
+export function parseOnboardingResult(text: string): OnboardingResult {
+  return onboardingResultSchema.parse(extractJsonBlock(text))
+}
+
 export function parseImplementationResult(text: string): ImplementationResult {
   return implementationResultSchema.parse(extractJsonBlock(text))
 }

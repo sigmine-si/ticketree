@@ -22,6 +22,7 @@ import { runSpecMergeJob } from './jobs/spec-merge.js'
 import { runImplementationJob } from './jobs/implementation.js'
 import { runDeployJob } from './jobs/deploy.js'
 import { runDeployFinalizeJob } from './jobs/deploy-finalize.js'
+import { runOnboardingJob } from './jobs/onboarding.js'
 
 const RUNNER_ID = `runner-${process.pid}-${randomUUID().slice(0, 8)}`
 /** 하트비트 주기. 회수 기준의 1/4보다 짧아야 살아 있는 job이 회수되지 않는다. */
@@ -82,6 +83,8 @@ async function dispatch(job: ClaimedJob): Promise<void> {
       return void (await finishJob(db, job.id, await runDeployJob(db, job)))
     case 'deploy_finalize':
       return void (await finishJob(db, job.id, await runDeployFinalizeJob(db, job)))
+    case 'onboarding':
+      return void (await finishJob(db, job.id, await runOnboardingJob(db, job)))
     default:
       throw new Error(`job kind '${job.kind}' is not implemented yet`)
   }

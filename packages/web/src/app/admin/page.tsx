@@ -4,6 +4,7 @@ import { getSession } from '@/lib/session'
 import { ledger, listQueue, noticeItems } from '@/lib/admin'
 import { AdminTopBar } from '@/components/AdminTopBar'
 import { AdminQueue } from '@/components/AdminQueue'
+import { NewProject } from '@/components/NewProject'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,7 @@ export default async function AdminHome() {
             <h1>검토 큐</h1>
             <p className="sub">내 결정을 기다리는 순서대로 정렬되어 있어요</p>
           </div>
+          <NewProject />
         </div>
 
         <div className="ledger four">

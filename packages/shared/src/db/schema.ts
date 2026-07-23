@@ -295,12 +295,11 @@ export const specVersions = pgTable('spec_versions', {
 
 export const pullRequests = pgTable('pull_requests', {
   id: uuid('id').primaryKey().defaultRandom(),
-  requestId: uuid('request_id')
-    .notNull()
-    .references(() => changeRequests.id, { onDelete: 'cascade' }),
+  /** NULL이면 요청에 속하지 않는 PR — 온보딩이 그렇다 (§12) */
+  requestId: uuid('request_id').references(() => changeRequests.id, { onDelete: 'cascade' }),
   /** NULL이면 허브(Spec) PR */
   repoId: uuid('repo_id').references(() => repos.id, { onDelete: 'set null' }),
-  /** spec | code */
+  /** spec | code | onboarding */
   kind: text('kind').notNull(),
   prNumber: integer('pr_number').notNull(),
   status: text('status').notNull().default('open'),

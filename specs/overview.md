@@ -164,11 +164,10 @@ job 종류가 레인을 정하고, 레인이 도구·모델·권한을 정한다
 
 ### 미해결
 
-- **(미정) 프로덕션 빌드가 깨져 있다.** `next build`가 404·500을 프리렌더하다
-  "`<Html>` should not be imported outside of pages/_document"로 죽는다. app 라우터만
-  쓰고 pages 디렉터리도 next/document import도 없으며, react·react-dom·next 버전도
-  일치한다. `not-found.tsx`·`global-error.tsx`를 넣어도 같다(Next 15.5.20).
-  **로컬 개발만 가능하고 서버 배포는 이 문제부터 풀어야 한다.**
+- 프로덕션 빌드는 정상이다. 한동안 깨진 줄 알았는데 원인은 코드가 아니라 셸 환경의
+  `TURBOPACK=1` 이었다 — 이 변수가 `next build` 를 Turbopack 으로 강제하고, Turbopack
+  빌드가 app 라우터 전용 프로젝트의 404 생성에서 죽는다(빈 Next 앱도 재현된다).
+  **빌드·배포 스크립트는 `TURBOPACK` 을 물려받지 않게 해야 한다.**
 - **(미정) 러너가 재시작되면 실행 중이던 job이 running으로 남고 아무도 줍지 않는다.**
   `tsx watch`가 파일 변경으로 재시작할 때 실제로 발생했다. 지금은 사람이 DB에서
   재등록해야 한다.
