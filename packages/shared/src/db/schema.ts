@@ -277,7 +277,10 @@ export const specVersions = pgTable('spec_versions', {
   version: text('version').notNull(),
   requestId: uuid('request_id').references(() => changeRequests.id, { onDelete: 'set null' }),
   hubPr: integer('hub_pr'),
-  /** proposed | merged | rejected */
+  /**
+   * proposed | merged | live | rejected | superseded
+   * superseded = 관리자가 명세를 다시 쓰게 해서 폐기된 안. 머지된 적이 없다.
+   */
   status: text('status').notNull().default('proposed'),
   summary: text('summary'),
   mergedAt: timestamp('merged_at', { withTimezone: true }),

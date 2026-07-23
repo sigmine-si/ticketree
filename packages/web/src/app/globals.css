@@ -410,6 +410,8 @@ tbody tr:hover { background: #fafaf7; }
 .spec-search { width: 100%; box-sizing: border-box; margin: 0 0 6px; padding: 8px 10px; font-family: var(--sans); font-size: 13px; color: var(--ink); background: var(--page); border: 1px solid var(--line); border-radius: 8px; }
 .spec-search::placeholder { color: var(--faint); }
 .spec-search:focus { outline: none; border-color: var(--green); }
+.migrate-check { display: flex; align-items: center; gap: 7px; margin-top: 9px; font-size: 12.5px; color: var(--sub); cursor: pointer; }
+.migrate-check input { accent-color: var(--green); }
 .redo-box { display: flex; flex-direction: column; gap: 8px; }
 .redo-input { width: 100%; box-sizing: border-box; padding: 9px 11px; font-family: var(--sans); font-size: 13px; line-height: 1.6; color: var(--ink); background: var(--page); border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
 .redo-input:focus { outline: none; border-color: var(--green); }
