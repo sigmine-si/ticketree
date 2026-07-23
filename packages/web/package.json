@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3832",
-    "build": "TURBOPACK= next build",
-    "start": "next start -p 3832",
+    "dev": "NODE_ENV=development TURBOPACK= next dev -p 3832",
+    "build": "NODE_ENV=production TURBOPACK= next build",
+    "start": "NODE_ENV=production TURBOPACK= next start -p 3832",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
