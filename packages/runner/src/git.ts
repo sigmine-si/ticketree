@@ -136,6 +136,14 @@ export async function syncMain(cwd: string): Promise<void> {
 }
 
 /**
+ * PR을 닫는다. 머지가 아니라 폐기다 — 명세를 다시 쓸 때 옛 PR을 정리한다.
+ * 브랜치도 같이 지운다. 다음 시도가 깨끗한 브랜치에서 시작해야 한다.
+ */
+export async function closePr(cwd: string, prNumber: number, comment: string): Promise<void> {
+  await gh(cwd, 'pr', 'close', String(prNumber), '--delete-branch', '--comment', comment)
+}
+
+/**
  * PR 머지. 이 함수는 관리자 승인 뒤 spec_merge job에서만 불린다.
  * 에이전트가 닿을 수 있는 코드 경로에 두지 않는다.
  */

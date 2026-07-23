@@ -22,6 +22,7 @@ import { runAgent } from '../agent/claude.js'
 import { statusTextFrom } from '../agent/status-text.js'
 import { setStatusText, type ClaimedJob, type JobOutcome } from '../queue.js'
 import {
+  closePr,
   commitPaths,
   createPr,
   diffAgainstMain,
@@ -127,6 +128,18 @@ export async function runSpecDraftJob(db: Db, job: ClaimedJob): Promise<JobOutco
   const intake = lastAgent?.payload as IntakeResult | null
   if (!intake?.summary) throw new Error('확정된 변경 요청서가 없습니다')
 
+  // 운영자가 "이렇게 다시 써라"라고 남긴 지침 (§5). 없으면 첫 작성이다.
+  const operatorNotes = (
+    await db
+      .select({ content: messages.content })
+      .from(messages)
+      .where(and(eq(messages.requestId, request.id), eq(messages.role, 'system')))
+      .orderBy(desc(messages.round))
+      .limit(3)
+  )
+    .map((m) => m.content)
+    .reverse()
+
   // 견적 단계가 지적한 위험이 곧 미해결 설계 결정이다 — 구현 규칙에 남길 재료다
   const [estimate] = await db
     .select({ wbs: estimates.wbs })
@@ -139,6 +152,26 @@ export async function runSpecDraftJob(db: Db, job: ClaimedJob): Promise<JobOutco
   const cwd = project.workspacePath
   const reqTag = `REQ-${String(request.reqNo).padStart(3, '0')}`
   const branch = specBranch(request.reqNo)
+
+  // 재실행이면 앞서 연 명세 PR을 먼저 닫는다. 같은 브랜치에 다시 push하면
+  // GitHub이 옛 PR을 되살려 리뷰 맥락이 섞인다.
+  const [stale] = await db
+    .select({ id: pullRequests.id, prNumber: pullRequests.prNumber })
+    .from(pullRequests)
+    .where(
+      and(
+        eq(pullRequests.requestId, request.id),
+        eq(pullRequests.kind, 'spec'),
+        eq(pullRequests.status, 'open'),
+      ),
+    )
+  if (stale) {
+    await closePr(cwd, stale.prNumber, '운영자 지침을 받아 명세를 다시 씁니다.')
+    await db
+      .update(pullRequests)
+      .set({ status: 'closed' })
+      .where(eq(pullRequests.id, stale.id))
+  }
 
   // 러너가 브랜치를 연다 — 에이전트는 git을 만지지 않는다
   await prepareBranch(cwd, branch)
@@ -160,6 +193,9 @@ export async function runSpecDraftJob(db: Db, job: ClaimedJob): Promise<JobOutco
     intake.notes,
     estimation?.risks?.length
       ? `\n**견적 단계에서 지적된 위험 — 미해결이면 "(미정)"으로 규칙에 남긴다**\n${estimation.risks.map((r) => `- ${r}`).join('\n')}`
+      : '',
+    operatorNotes.length
+      ? `\n**운영자 지침 (앞선 명세안에 대한 우리 팀의 결정 — 그대로 반영한다)**\n${operatorNotes.map((n) => `- ${n}`).join('\n')}`
       : '',
     '',
     `추가하는 항목에는 \`(예정 · ${reqTag})\` 태그를 붙인다.`,
