@@ -9,6 +9,7 @@ import { and, eq } from 'drizzle-orm'
 import { projects, users } from '@ticketree/shared'
 import { db } from '@/lib/data'
 import { setSession } from '@/lib/session'
+import { clientPath } from '@/lib/routes'
 
 export default async function DevLogin() {
   const rows = await db
@@ -27,12 +28,18 @@ export default async function DevLogin() {
     'use server'
     const userId = String(formData.get('userId'))
     const [u] = await db
-      .select({ id: users.id, name: users.name, projectId: users.projectId })
+      .select({
+        id: users.id,
+        name: users.name,
+        projectId: users.projectId,
+        slug: projects.slug,
+      })
       .from(users)
+      .innerJoin(projects, eq(users.projectId, projects.id))
       .where(and(eq(users.id, userId), eq(users.kind, 'client')))
     if (!u?.projectId) return
     await setSession({ userId: u.id, projectId: u.projectId, kind: 'client', name: u.name })
-    redirect('/requests')
+    redirect(clientPath.requests(u.slug))
   }
 
   return (
