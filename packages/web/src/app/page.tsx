@@ -14,16 +14,16 @@ import { adminPath, clientPath } from '@/lib/routes'
 
 export default async function Home() {
   const session = await getSession()
-  if (!session) redirect('/dev-login')
+  if (!session) redirect(clientPath.login)
   if (session.kind === 'admin') redirect(adminPath.queue)
-  if (!session.projectId) redirect('/dev-login')
+  if (!session.projectId) redirect(clientPath.login)
 
   const [project] = await db
     .select({ slug: projects.slug })
     .from(projects)
     .where(eq(projects.id, session.projectId))
   // 쿠키가 가리키는 프로젝트가 사라진 경우 — 다시 로그인시킨다
-  if (!project) redirect('/dev-login')
+  if (!project) redirect(clientPath.login)
 
   redirect(clientPath.requests(project.slug))
 }

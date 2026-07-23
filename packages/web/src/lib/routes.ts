@@ -10,10 +10,16 @@ export const clientPath = {
   requests: (slug: string) => `/${slug}/requests`,
   request: (slug: string, reqNo: number) => `/${slug}/requests/${reqNo}`,
   spec: (slug: string, f?: string) => (f ? `/${slug}/spec?f=${f}` : `/${slug}/spec`),
+  /** 로그인하지 않은 사람이 닿는 곳. 들어오는 문은 초대 링크뿐이라 안내만 한다. */
+  login: '/login',
+  /** 관리자가 복사해 전달하는 주소. 토큰 평문은 이 링크에만 남는다. */
+  invite: (token: string) => `/invite/${token}`,
 }
 
 export const adminPath = {
   /** 큐는 여러 프로젝트를 한 판에 모아 보는 곳이라 slug가 없다 */
   queue: '/admin',
   request: (slug: string, id: string) => `/admin/${slug}/requests/${id}`,
+  /** 고객 계정 — 초대 링크·PIN 발급 */
+  invites: '/admin/invites',
 }

@@ -98,6 +98,17 @@ export async function requireAdmin(): Promise<Session> {
   return s
 }
 
+/**
+ * 로컬 개발 전용 통로(`/dev-login`)가 열려 있는가.
+ *
+ * 이 화면은 로컬에서 로그인 흐름 없이 DB에 들어가는 유일한 문이라 남겨둔다.
+ * 대신 실제 서비스에서는 닫힌다 — 거기 들어오는 문은 초대 링크뿐이다
+ * (specs/features/client-login.md).
+ */
+export function devLoginEnabled(): boolean {
+  return process.env.NODE_ENV !== 'production'
+}
+
 /** 아이디·비밀번호 둘 다 있어야 관리자 로그인이 열린다 (§16-1). */
 export function adminLoginConfigured(): boolean {
   return Boolean(process.env.ADMIN_ID && process.env.ADMIN_PASSWORD)

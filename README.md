@@ -36,8 +36,13 @@ pnpm dev          # web + runner
 모두 이 파일을 찾아 올린다(`packages/shared/src/env.ts`). 로컬에서는 `claude` CLI 로그인
 상태를 그대로 쓰므로 에이전트 토큰을 따로 넣지 않아도 된다.
 
-포털은 `/dev-login`, 관리자는 `/admin/login`으로 들어간다. 포털의 `/dev-login`은 로컬 전용
-우회이며 실제 인증(초대링크+PIN)은 세션 레이어 위에 이미 붙어 있다.
+포털은 초대 링크 + PIN(`/invite/<token>`), 관리자는 `/admin/login`으로 들어간다.
+초대 링크는 `/admin/invites`에서 고객 계정마다 발급한다 — 링크와 PIN은 발급 직후
+한 번만 보이고, 저장되는 것은 해시뿐이라 다시 볼 수 없다. PIN을 5회 연속 틀리면 그
+링크는 잠기고 재발급으로만 풀린다.
+
+`/dev-login`은 로컬 전용 우회다. `NODE_ENV=production`에서는 404가 되므로 실제
+서비스에는 초대 링크 말고 다른 문이 없다.
 
 ### 관리자 로그인 설정
 
@@ -59,7 +64,7 @@ pnpm seed:self    # 자기 자신을 프로젝트로 등록한다
 돌리는 법:
 
 1. `pnpm dev`로 웹과 러너를 띄운다
-2. `/dev-login`에서 '시그마인 / Ticket Tree'로 들어가 요청을 낸다
+2. `/dev-login`(로컬 전용)에서 '시그마인 / Ticket Tree'로 들어가 요청을 낸다
 3. `/admin`에서 명세와 배포를 승인한다
 4. 머지된 변경은 `git pull`로 이 디렉터리에 가져온다 — 워크스페이스 클론과는 별개다
 

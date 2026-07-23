@@ -72,6 +72,14 @@ export const users = pgTable(
     // client 전용 — 초대링크 + PIN
     inviteTokenHash: text('invite_token_hash'),
     pinHash: text('pin_hash'),
+    /** 초대 링크를 마지막으로 발급한 시각. 관리자 화면이 "발급됨"을 보여주는 근거다. */
+    inviteIssuedAt: timestamp('invite_issued_at', { withTimezone: true }),
+    /**
+     * PIN 연속 실패 횟수. 5가 되면 잠긴다 (specs/features/client-login.md).
+     * 인메모리가 아니라 DB에 두는 이유 — 프로세스가 재시작해도 잠금이 풀리면
+     * "관리자가 다시 발급해야만 풀린다"가 거짓이 된다.
+     */
+    pinFailedCount: integer('pin_failed_count').notNull().default(0),
     // admin 전용 — GitHub OAuth
     githubLogin: text('github_login'),
     githubId: bigint('github_id', { mode: 'number' }),
@@ -80,6 +88,8 @@ export const users = pgTable(
   },
   (t) => [
     uniqueIndex('users_github_id_idx').on(t.githubId),
+    // 초대 링크 조회는 해시로 한다. unique라 토큰 충돌도 DB가 막는다.
+    uniqueIndex('users_invite_token_idx').on(t.inviteTokenHash),
     index('users_project_idx').on(t.projectId),
   ],
 )

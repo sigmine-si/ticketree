@@ -13,10 +13,12 @@ import {
   messageQuestions,
   messages,
   projects,
+  users,
   type IntakeResult,
   type RequestFlag,
   type RequestStatus,
 } from '@ticketree/shared'
+import { hashInviteToken, MAX_PIN_ATTEMPTS } from './invite'
 
 const db = createDb()
 
@@ -199,4 +201,67 @@ export async function monthlyTotals(projectId: string) {
       ),
     )
   return row ?? { total: 0, count: 0 }
+}
+
+// ─────────────────────────────── 세션 이전 — 초대 링크와 PIN
+//
+// 이 아래 함수들만 projectId를 받지 않는다. 스코프를 정하는 쪽이라 스코프를
+// 받을 수 없다 — 여기서 찾아낸 projectId가 세션에 실려 나머지 전부를 스코프한다.
+
+export interface InviteTarget {
+  userId: string
+  name: string
+  projectId: string
+  projectName: string
+  slug: string
+  pinHash: string | null
+  /** 남은 시도가 0이면 잠긴 것이다. 재발급 말고는 풀리지 않는다. */
+  attemptsLeft: number
+}
+
+/** 토큰 평문으로 초대 대상을 찾는다. 저장된 것은 해시뿐이라 해시로 조회한다. */
+export async function findInviteByToken(token: string): Promise<InviteTarget | null> {
+  const [row] = await db
+    .select({
+      userId: users.id,
+      name: users.name,
+      projectId: users.projectId,
+      projectName: projects.name,
+      slug: projects.slug,
+      pinHash: users.pinHash,
+      failed: users.pinFailedCount,
+    })
+    .from(users)
+    .innerJoin(projects, eq(users.projectId, projects.id))
+    .where(and(eq(users.inviteTokenHash, hashInviteToken(token)), eq(users.kind, 'client')))
+
+  if (!row?.projectId) return null
+  return {
+    userId: row.userId,
+    name: row.name,
+    projectId: row.projectId,
+    projectName: row.projectName,
+    slug: row.slug,
+    pinHash: row.pinHash,
+    attemptsLeft: Math.max(0, MAX_PIN_ATTEMPTS - row.failed),
+  }
+}
+
+/**
+ * 실패 1회를 적는다. 카운터가 한도에 닿으면 그 초대 링크는 잠긴다 —
+ * 판정은 다음 조회의 `attemptsLeft`가 한다. 여기서는 세기만 한다.
+ */
+export async function recordPinFailure(userId: string): Promise<void> {
+  await db
+    .update(users)
+    .set({ pinFailedCount: sql`${users.pinFailedCount} + 1` })
+    .where(eq(users.id, userId))
+}
+
+/** 성공했으니 카운터를 되돌린다 — '연속' 실패 5회가 기준이다. */
+export async function clearPinFailures(userId: string): Promise<void> {
+  await db
+    .update(users)
+    .set({ pinFailedCount: 0, lastSeenAt: new Date() })
+    .where(eq(users.id, userId))
 }
