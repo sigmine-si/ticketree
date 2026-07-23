@@ -5,12 +5,12 @@
  * 이 화면은 로컬에서 로그인 흐름 없이 DB에 들어가는 유일한 문이라 남겨두되,
  * 실제 서비스에서는 통째로 닫는다 — specs/features/client-login.md.
  */
-import { notFound, redirect } from 'next/navigation'
-import { and, eq } from 'drizzle-orm'
+import { notFound } from 'next/navigation'
+import { eq } from 'drizzle-orm'
 import { projects, users } from '@ticketree/shared'
 import { db } from '@/lib/data'
-import { devLoginEnabled, setSession } from '@/lib/session'
-import { clientPath } from '@/lib/routes'
+import { devLoginEnabled } from '@/lib/session'
+import { devLogin } from './actions'
 
 export default async function DevLogin() {
   // 있다는 사실조차 알리지 않는다. 프로덕션에는 이 주소가 없는 것과 같다.
@@ -27,26 +27,6 @@ export default async function DevLogin() {
     .from(users)
     .innerJoin(projects, eq(users.projectId, projects.id))
     .where(eq(users.kind, 'client'))
-
-  async function login(formData: FormData) {
-    'use server'
-    // 서버 액션은 페이지 렌더와 별개의 요청이다 — 여기서도 다시 막는다
-    if (!devLoginEnabled()) notFound()
-    const userId = String(formData.get('userId'))
-    const [u] = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        projectId: users.projectId,
-        slug: projects.slug,
-      })
-      .from(users)
-      .innerJoin(projects, eq(users.projectId, projects.id))
-      .where(and(eq(users.id, userId), eq(users.kind, 'client')))
-    if (!u?.projectId) return
-    await setSession({ userId: u.id, projectId: u.projectId, kind: 'client', name: u.name })
-    redirect(clientPath.requests(u.slug))
-  }
 
   return (
     <main className="wrap" style={{ maxWidth: 520 }}>
@@ -68,7 +48,7 @@ export default async function DevLogin() {
       ) : (
         <div className="card">
           {rows.map((r) => (
-            <form key={r.userId} action={login} style={{ marginBottom: 8 }}>
+            <form key={r.userId} action={devLogin} style={{ marginBottom: 8 }}>
               <input type="hidden" name="userId" value={r.userId} />
               <button className="btn" style={{ width: '100%', textAlign: 'left' }}>
                 <strong>{r.name}</strong>
