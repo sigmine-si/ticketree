@@ -9,16 +9,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { IntakeResult } from '@ticketree/shared/agent-io'
+import { QuestionBlock, type ThreadQuestion } from './QuestionBlock'
 
-interface ThreadQuestion {
-  id: string
-  idx: number
-  prompt: string
-  hint: string | null
-  options: string[]
-  answerText: string | null
-  answeredAt: string | null
-}
 interface ThreadMessage {
   id: string
   role: 'client' | 'agent' | 'system'
@@ -227,7 +219,12 @@ export function NewRequestModal({ onClose }: { onClose: () => void }) {
                   <div className="msg sys" key={m.id}>
                     {m.content}
                     {m.questions.map((q) => (
-                      <QuestionBlock key={q.id} q={q} onAnswer={answer} />
+                      <QuestionBlock
+                        key={q.id}
+                        q={q}
+                        onAnswer={answer}
+                        disabled={statusText !== null}
+                      />
                     ))}
                     {m.payload?.outcome === 'ready' && m.payload.summary && (
                       <>
@@ -298,63 +295,6 @@ export function NewRequestModal({ onClose }: { onClose: () => void }) {
             )}
           </>
         )}
-      </div>
-    </div>
-  )
-}
-
-function QuestionBlock({
-  q,
-  onAnswer,
-}: {
-  q: ThreadQuestion
-  onAnswer: (q: ThreadQuestion, text: string, optionIdx: number | null) => Promise<void>
-}) {
-  const [text, setText] = useState('')
-
-  if (q.answeredAt) {
-    return (
-      <div className="q">
-        <p className="qt">
-          {q.idx + 1}. {q.prompt}
-        </p>
-        <div className="answered">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
-          {q.answerText}
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="q">
-      <p className="qt">
-        {q.idx + 1}. {q.prompt}
-      </p>
-      {q.hint && <p className="qs">{q.hint}</p>}
-      {q.options.length > 0 && (
-        <div className="chips" style={{ marginBottom: 10 }}>
-          {q.options.map((o, i) => (
-            <button key={i} className="chip" onClick={() => void onAnswer(q, o, i)}>
-              {o}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="answer-row">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && text.trim()) void onAnswer(q, text.trim(), null)
-          }}
-          placeholder="보기에 없으면 직접 적어주세요"
-        />
-        <button className="btn" onClick={() => text.trim() && void onAnswer(q, text.trim(), null)}>
-          답변
-        </button>
       </div>
     </div>
   )

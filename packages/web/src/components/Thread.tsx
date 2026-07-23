@@ -8,26 +8,33 @@
  */
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { IntakeResult } from '@ticketree/shared/agent-io'
+import type { IntakeResult, SowResult } from '@ticketree/shared/agent-io'
+import type { RequestKind } from '@ticketree/shared/kind'
+import { QuestionBlock, type ThreadQuestion } from './QuestionBlock'
+import { SowCard } from './SowCard'
 
-export interface ThreadQuestion {
-  id: string
-  idx: number
-  prompt: string
-  hint: string | null
-  options: string[]
-  answerText: string | null
-  answeredAt: string | null
-}
+export type { ThreadQuestion }
+
+/**
+ * 접수 대화와 과업내용서 대화가 같은 스레드 구조를 쓴다 — 담기는 결과만 다르다.
+ * 어느 쪽인지는 필드 존재로 가른다(아래 summaryOf·sowOf).
+ */
+export type ThreadPayload = IntakeResult | SowResult
+
 export interface ThreadMessage {
   id: string
   round: number
   role: 'client' | 'agent' | 'system'
   content: string
-  payload: IntakeResult | null
+  payload: ThreadPayload | null
   createdAt: string
   questions: ThreadQuestion[]
 }
+
+const summaryOf = (p: ThreadPayload | null) =>
+  p && p.outcome === 'ready' && 'summary' in p ? p.summary : undefined
+const sowOf = (p: ThreadPayload | null) =>
+  p && p.outcome === 'ready' && 'sow' in p ? p.sow : undefined
 
 export function Thread({
   requestId,
@@ -38,12 +45,15 @@ export function Thread({
   canAct = true,
   canConfirm,
   quote,
+  kind = 'change',
 }: {
   requestId: string
   messages: ThreadMessage[]
   clientName: string
   projectName: string
   busy: boolean
+  /** 과업내용서면 견적·승인 자리가 없고 확정 문구가 달라진다 */
+  kind?: RequestKind
   /**
    * false면 관리자 열람 — 답변·확정·견적 승인을 숨긴다 (주소 규약).
    * 자물쇠가 아니라 정직함이다. 실제 차단은 API의 requireClient가 한다.
@@ -115,15 +125,24 @@ export function Thread({
       {busy && (
         <div className="status-line">
           <span className="spinner" role="status" aria-label="확인 중" />
-          <span>요청 내용을 확정하기 위해 살펴보고 있어요 — 잠시 후 질문 또는 견적이 도착합니다</span>
+          <span>
+            {kind === 'sow'
+              ? '과업내용서를 정리하고 있어요 — 잠시 후 질문이 도착합니다'
+              : '요청 내용을 확정하기 위해 살펴보고 있어요 — 잠시 후 질문 또는 견적이 도착합니다'}
+          </span>
         </div>
       )}
 
       {canConfirm && canAct && (
         <div className="card">
+          {kind === 'sow' && (
+            <p className="cs" style={{ marginBottom: 10 }}>
+              확정하면 이 내용이 계약 범위가 되고, 서비스 명세로 정리돼요.
+            </p>
+          )}
           <div className="est-actions" style={{ marginTop: 0 }}>
             <button className="btn btn-primary" onClick={confirm} disabled={pending}>
-              이 내용으로 요청하기
+              {kind === 'sow' ? '이 과업내용서로 확정하기' : '이 내용으로 요청하기'}
             </button>
           </div>
         </div>
@@ -190,7 +209,8 @@ function AgentCard({
   disabled: boolean
 }) {
   const answered = m.questions.filter((q) => q.answeredAt).length
-  const summary = m.payload?.outcome === 'ready' ? m.payload.summary : undefined
+  const summary = summaryOf(m.payload)
+  const sow = sowOf(m.payload)
 
   return (
     <div className={`card${m.questions.length ? ' qcard' : ''}`}>
@@ -245,6 +265,8 @@ function AgentCard({
         </div>
       )}
 
+      {sow && <SowCard sow={sow} inline />}
+
       {m.payload?.outcome === 'escalate' && (
         <div className="callout" style={{ marginTop: 12 }}>
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2">
@@ -257,103 +279,6 @@ function AgentCard({
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function QuestionBlock({
-  q,
-  onAnswer,
-  canAct,
-  disabled,
-}: {
-  q: ThreadQuestion
-  onAnswer: (q: ThreadQuestion, text: string, optionIdx: number | null) => Promise<void>
-  canAct: boolean
-  disabled: boolean
-}) {
-  const [text, setText] = useState('')
-  // 칩은 고르기만 한다 — 실제 전송은 '답변 보내기'에서 일어난다. 그 전까지 자유롭게 바꾼다
-  const [selected, setSelected] = useState<number | null>(null)
-
-  // 관리자 열람 — 무엇을 물었는지는 보여주고, 답하는 자리만 걷는다
-  if (!q.answeredAt && !canAct) {
-    return (
-      <div className="q">
-        <p className="qt">
-          {q.idx + 1}. {q.prompt}
-        </p>
-        <p className="qs">클라이언트 답변을 기다리는 중이에요</p>
-      </div>
-    )
-  }
-
-  if (q.answeredAt) {
-    return (
-      <div className="q">
-        <p className="qt">
-          {q.idx + 1}. {q.prompt}
-        </p>
-        <div className="answered">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
-          {q.answerText}
-        </div>
-      </div>
-    )
-  }
-
-  // 고른 칩이 있으면 그 칩, 없으면 직접 입력한 글이 보낼 답이다
-  const value = (selected !== null ? q.options[selected] : text.trim()) ?? ''
-  const canSend = !disabled && value.length > 0
-
-  return (
-    <div className="q">
-      <p className="qt">
-        {q.idx + 1}. {q.prompt}
-      </p>
-      <p className="qs">{q.hint ?? '보기에 없으면 아래에 직접 적어주세요'}</p>
-      {q.options.length > 0 && (
-        <div className="chips" style={{ marginBottom: 10 }}>
-          {q.options.map((o, i) => (
-            <button
-              key={i}
-              className={`chip${selected === i ? ' sel' : ''}`}
-              disabled={disabled}
-              onClick={() => {
-                // 다시 누르면 선택 해제. 칩을 고르면 직접 입력은 비운다
-                setSelected(selected === i ? null : i)
-                setText('')
-              }}
-            >
-              {o}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="answer-row">
-        <input
-          value={text}
-          disabled={disabled}
-          onChange={(e) => {
-            setText(e.target.value)
-            // 직접 입력을 시작하면 골라둔 칩은 놓는다
-            if (selected !== null) setSelected(null)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && canSend) void onAnswer(q, value, selected)
-          }}
-          placeholder="직접 입력"
-        />
-        <button
-          className="btn"
-          disabled={!canSend}
-          onClick={() => canSend && void onAnswer(q, value, selected)}
-        >
-          답변 보내기
-        </button>
-      </div>
     </div>
   )
 }

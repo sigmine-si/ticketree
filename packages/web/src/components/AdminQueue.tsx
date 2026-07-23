@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatKrw, usdToKrw } from '@ticketree/shared/money'
+import { requestTag, type RequestKind } from '@ticketree/shared/kind'
 import { DECISION_LABEL, DECISION_TONE, type Decision } from '@/lib/decision'
 import { adminPath } from '@/lib/routes'
 
 export interface QueueRowView {
   id: string
+  kind: RequestKind
   reqNo: number | null
   title: string | null
   projectName: string
@@ -105,7 +107,7 @@ export function AdminQueue({ rows }: { rows: QueueRowView[] }) {
                     e.key === 'Enter' && router.push(adminPath.request(r.projectSlug, r.id))
                   }
                 >
-                  <td className="tno">REQ-{String(r.reqNo ?? 0).padStart(3, '0')}</td>
+                  <td className="tno">{requestTag(r.kind, r.reqNo)}</td>
                   <td className="proj-cell">
                     <div className="p">{r.projectName}</div>
                     <div className="c">{r.clientName}</div>

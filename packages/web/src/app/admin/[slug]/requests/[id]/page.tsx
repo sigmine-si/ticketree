@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { formatKrw, usdToKrw } from '@ticketree/shared/money'
 import type { RequestFlag, RequestStatus } from '@ticketree/shared/status'
+import { requestTag, type RequestKind } from '@ticketree/shared/kind'
+import { SowCard } from '@/components/SowCard'
 import { getSession } from '@/lib/session'
 import { getReviewDetail, ledger, noticeItems } from '@/lib/admin'
 import { adminPath } from '@/lib/routes'
@@ -29,8 +31,9 @@ export default async function ReviewPage({
   // 그럴듯한 화면을 띄우면 어느 프로젝트 건인지 착각한 채 승인하게 된다
   if (detail.project.slug !== slug) notFound()
 
-  const { request, project, intake, estimation, estimate, qa, jobs, similar, specPr, codePr } =
+  const { request, project, intake, sow, estimation, estimate, qa, jobs, similar, specPr, codePr } =
     detail
+  const isSow = request.kind === 'sow'
   const status = request.status as RequestStatus
   const flag = request.flag as RequestFlag | null
   const decision = decisionOf(status, flag, false)
@@ -51,7 +54,7 @@ export default async function ReviewPage({
           <div className="row1">
             <div>
               <div className="tno-big">
-                REQ-{String(request.reqNo ?? 0).padStart(3, '0')} · {project.name} ·{' '}
+                {requestTag(request.kind as RequestKind, request.reqNo)} · {project.name} ·{' '}
                 {project.clientName}
               </div>
               <h2>{request.title ?? '확인 중인 요청'}</h2>
@@ -75,8 +78,13 @@ export default async function ReviewPage({
               <EscalationAnswer requestId={request.id} question={intake?.escalation ?? intake?.message ?? null} />
             )}
 
+            {/* 계약 본문을 안 읽고 승인할 수는 없다 — 머지되는 순간 이게 계약 범위가 된다 */}
+            {isSow && sow && (
+              <SowCard sow={sow} tag={requestTag('sow', request.reqNo)} />
+            )}
+
             <div className="card">
-              <p className="ch">클라이언트 요청 원문</p>
+              <p className="ch">{isSow ? '클라이언트가 처음 쓴 내용' : '클라이언트 요청 원문'}</p>
               <p className="cs">여기서 시작했다</p>
               {request.asIs && (
                 <p className="note" style={{ marginBottom: 10 }}>
@@ -88,7 +96,8 @@ export default async function ReviewPage({
               </p>
             </div>
 
-            {intake && (
+            {/* 과업내용서에는 탐색 노트가 없다 — 읽을 코드가 없는 자리에서 만들어진다 */}
+            {!isSow && intake && (
               <div className="card">
                 <p className="ch">탐색 노트</p>
                 <p className="cs">
@@ -184,6 +193,7 @@ export default async function ReviewPage({
             {status === 'client_approved' ? (
               <ReviewActions
                 requestId={request.id}
+                kind={request.kind as RequestKind}
                 proposedAmount={estimate?.proposedAmount ?? null}
                 finalAmount={estimate?.finalAmount ?? null}
                 estimatedTokens={estimate?.costEstimateTokens ?? null}

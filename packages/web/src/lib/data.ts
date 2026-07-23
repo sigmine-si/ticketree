@@ -17,6 +17,7 @@ import {
   type IntakeResult,
   type RequestFlag,
   type RequestStatus,
+  type SowResult,
 } from '@ticketree/shared'
 import { hashInviteToken, MAX_PIN_ATTEMPTS } from './invite'
 
@@ -216,12 +217,15 @@ export interface ThreadQuestion {
   answeredAt: Date | null
 }
 
+/** 접수 대화와 과업내용서 대화가 같은 스레드에 실린다 — 결과 모양만 다르다 */
+export type ThreadPayload = IntakeResult | SowResult
+
 export interface ThreadMessage {
   id: string
   round: number
   role: 'client' | 'agent' | 'system'
   content: string
-  payload: IntakeResult | null
+  payload: ThreadPayload | null
   createdAt: Date
   questions: ThreadQuestion[]
 }
@@ -266,7 +270,7 @@ export async function getThread(requestId: string): Promise<ThreadMessage[]> {
     round: m.round,
     role: m.role as ThreadMessage['role'],
     content: m.content,
-    payload: (m.payload ?? null) as IntakeResult | null,
+    payload: (m.payload ?? null) as ThreadPayload | null,
     createdAt: m.createdAt,
     questions: byMessage.get(m.id) ?? [],
   }))

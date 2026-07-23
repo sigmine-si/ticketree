@@ -9,9 +9,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatKrw, usdToKrw } from '@ticketree/shared/money'
+import type { RequestKind } from '@ticketree/shared/kind'
 
 export function ReviewActions({
   requestId,
+  kind = 'change',
   proposedAmount,
   finalAmount,
   estimatedTokens,
@@ -23,6 +25,8 @@ export function ReviewActions({
   prNumber,
 }: {
   requestId: string
+  /** 과업내용서에는 견적이 없다 — 금액 칸을 통째로 걷는다 */
+  kind?: RequestKind
   proposedAmount: number | null
   finalAmount: number | null
   estimatedTokens: number | null
@@ -47,7 +51,8 @@ export function ReviewActions({
     action: 'approve_spec' | 'redo_spec' | 'request_changes' | 'reject',
     comment?: string,
   ) {
-    if (action === 'approve_spec' && !Number.isFinite(parsed)) {
+    // 과업내용서에는 청구가 없다 — 금액을 요구하면 승인 자체가 막힌다
+    if (action === 'approve_spec' && kind !== 'sow' && !Number.isFinite(parsed)) {
       setError('청구 금액을 확인해주세요')
       return
     }
@@ -59,7 +64,7 @@ export function ReviewActions({
       body: JSON.stringify({
         action,
         comment,
-        finalAmount: Number.isFinite(parsed) ? parsed : undefined,
+        finalAmount: kind !== 'sow' && Number.isFinite(parsed) ? parsed : undefined,
       }),
     })
     setBusy(false)
@@ -74,7 +79,22 @@ export function ReviewActions({
   return (
     <>
       <div className="card">
-        <p className="ch">견적</p>
+        <p className="ch">{kind === 'sow' ? '이 과업내용서' : '견적'}</p>
+        {kind === 'sow' ? (
+          <>
+            <div className="est-figs">
+              <div className="efrow">
+                <span>여기까지 쓴 원가</span>
+                <span className="ev dim">{formatKrw(usdToKrw(spentUsd))}</span>
+              </div>
+            </div>
+            <p className="margin-note">
+              과업내용서에는 청구가 없어요. 승인하면 이 범위가 계약으로 발효되고,
+              이후 요청은 이 범위와 대조해 견적이 나갑니다.
+            </p>
+          </>
+        ) : (
+        <>
         <div className="est-figs">
           <div className="efrow">
             <span>예상 작업</span>
@@ -119,6 +139,8 @@ export function ReviewActions({
           <br />
           원가는 API 환산가예요 — 구독 실지출과 다릅니다
         </p>
+        </>
+        )}
       </div>
 
       {error && (
@@ -131,7 +153,7 @@ export function ReviewActions({
           disabled={busy || prNumber === null}
           onClick={() => void decide('approve_spec')}
         >
-          Spec 승인 · 개발 시작
+          {kind === 'sow' ? '과업내용서 확정 · 계약 발효' : 'Spec 승인 · 개발 시작'}
         </button>
         <button
           className="btn"
@@ -175,9 +197,17 @@ export function ReviewActions({
             <>
               승인하면 <strong>PR #{prNumber}가 머지되고</strong>
               <br />
-              청구 금액이 확정됩니다 (현재 큐 {queueDepth}건)
-              <br />
-              <span style={{ color: 'var(--amber)' }}>구현 job 등록은 슬라이스 4에서 붙습니다</span>
+              {kind === 'sow' ? (
+                <>
+                  이 범위가 계약으로 발효됩니다
+                  <br />
+                  <span style={{ color: 'var(--amber)' }}>
+                    이후 요청은 이 범위 안이면 추가 비용 없이 진행됩니다
+                  </span>
+                </>
+              ) : (
+                <>청구 금액이 확정됩니다 (현재 큐 {queueDepth}건)</>
+              )}
             </>
           )}
         </p>

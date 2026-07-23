@@ -46,6 +46,10 @@ export default async function RequestPage({
   const latestAgent = [...messages].reverse().find((m) => m.role === 'agent')
   const canConfirm = status === 'draft' && latestAgent?.payload?.outcome === 'ready'
 
+  // 스레드에는 과업내용서 결과도 실릴 수 있다 — 여기는 요청 화면이라 변경 요약만 본다
+  const payload = latestAgent?.payload
+  const summary = payload && 'summary' in payload ? payload.summary : undefined
+
   // 확정 견적 승인 대기 — 클라이언트 게이트 (§7)
   const estimate = status === 'quote_ready' ? await getEstimate(request.id) : null
   const amount = estimate?.finalAmount ?? estimate?.proposedAmount ?? null
@@ -54,7 +58,7 @@ export default async function RequestPage({
       ? {
           amount,
           days: estimate.estimatedDays,
-          scope: latestAgent?.payload?.summary?.scope ?? [],
+          scope: summary?.scope ?? [],
         }
       : null
 

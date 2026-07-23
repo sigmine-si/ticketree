@@ -13,7 +13,7 @@ export function TopBar({
   userName: string
   slug: string
   canAct?: boolean
-  active?: 'requests' | 'spec'
+  active?: 'sow' | 'requests' | 'spec'
 }) {
   return (
     <header className="topbar">
@@ -24,6 +24,13 @@ export function TopBar({
           </span>
           <span className="proj">{projectName}</span>
           <nav className="nav" aria-label="주 메뉴">
+            {/* 계약이 시간순으로 먼저다 — 과업내용서를 합의하고 나서 요청이 오간다 */}
+            <Link
+              className={`nav-link${active === 'sow' ? ' on' : ''}`}
+              href={clientPath.sows(slug)}
+            >
+              과업내용서
+            </Link>
             <Link
               className={`nav-link${active === 'requests' ? ' on' : ''}`}
               href={clientPath.requests(slug)}
