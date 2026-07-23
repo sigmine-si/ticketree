@@ -121,7 +121,7 @@ job 종류가 레인을 정하고, 레인이 도구·모델·권한을 정한다
 ### 인증
 
 클라이언트 세션과 관리자 세션은 별개 쿠키다. 각각의 로그인 방식은
-[요청 접수와 대화](features/intake.md)와 [관리자 검토 큐](features/admin.md)가 소유한다.
+[고객 접속과 로그인](features/client-login.md)과 [관리자 검토 큐](features/admin.md)가 소유한다.
 
 ### 원가
 
