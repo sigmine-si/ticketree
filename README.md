@@ -102,4 +102,4 @@ PROJECT_SLUG=ticketree pnpm --filter @ticketree/runner exec tsx src/dev/try-inta
 - [x] 슬라이스 3 — Spec·허브 repo (명세 PR·머지·명세 화면)
 - [x] 슬라이스 4 — 구현·배포 (worktree·코드 PR·머지·수동 배포·예정→정식)
 - [x] 도그푸딩 준비 — 자기 자신을 프로젝트로 등록 (`pnpm seed:self`)
-- [ ] 슬라이스 5 — 운영 (온보딩 job·알림 뱃지·원가 뷰·서버 배포)
+- [x] 슬라이스 5 — 운영 (고아 job 회수·알림 뱃지·원가 화면·온보딩 job·프로덕션 빌드)
