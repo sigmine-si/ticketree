@@ -43,8 +43,22 @@ export function NewRequestModal({ onClose }: { onClose: () => void }) {
   const ready = latestAgent?.payload?.outcome === 'ready'
   const escalated = latestAgent?.payload?.outcome === 'escalate'
 
+  // 모달이 열려 있는 동안 뒤 페이지 스크롤을 잠근다 — 채팅을 아래로 내릴 때
+  // 스크롤이 뒤 페이지로 번져(scroll chaining) 페이지가 딸려 내려가던 것을 막는다
   useEffect(() => {
-    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight })
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
+  // 새 내용이 오면 채팅을 아래로 붙인다. 단, 사용자가 위로 올려 읽는 중이면 당기지 않는다
+  useEffect(() => {
+    const el = chatRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+    if (nearBottom) el.scrollTo({ top: el.scrollHeight })
   }, [thread, statusText])
 
   // SSE — 러너가 DB에 쓴 버퍼링 문구를 릴레이받는다
