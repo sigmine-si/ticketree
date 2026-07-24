@@ -33,8 +33,9 @@ export function QuestionBlock({
   disabled?: boolean
 }) {
   const [text, setText] = useState('')
-  // 칩은 고르기만 한다 — 실제 전송은 '답변 보내기'에서 일어난다. 그 전까지 자유롭게 바꾼다
-  const [selected, setSelected] = useState<number | null>(null)
+  // 칩은 고르기만 한다 — 실제 전송은 '답변 보내기'에서 일어난다. 그 전까지 자유롭게 바꾼다.
+  // 여러 개를 고를 수 있다("여러 개를 골라도 됩니다"). 고른 것들을 옵션 순서대로 이어 보낸다.
+  const [selected, setSelected] = useState<number[]>([])
 
   if (!q.answeredAt && !canAct) {
     return (
@@ -63,8 +64,11 @@ export function QuestionBlock({
     )
   }
 
-  // 고른 칩이 있으면 그 칩, 없으면 직접 입력한 글이 보낼 답이다
-  const value = (selected !== null ? q.options[selected] : text.trim()) ?? ''
+  // 고른 칩이 있으면 그 칩들(옵션 순서대로), 없으면 직접 입력한 글이 보낼 답이다
+  const chosen = [...selected].sort((a, b) => a - b)
+  const value = (chosen.length > 0 ? chosen.map((i) => q.options[i]).join(', ') : text.trim()) ?? ''
+  // 한 개만 고르면 그 인덱스를 기록한다. 여러 개면 인덱스로 담을 수 없어 답 문자열만 남긴다
+  const optionIdx = chosen.length === 1 ? chosen[0]! : null
   const canSend = !disabled && value.length > 0
 
   return (
@@ -78,11 +82,13 @@ export function QuestionBlock({
           {q.options.map((o, i) => (
             <button
               key={i}
-              className={`chip${selected === i ? ' sel' : ''}`}
+              className={`chip${selected.includes(i) ? ' sel' : ''}`}
               disabled={disabled}
               onClick={() => {
-                // 다시 누르면 선택 해제. 칩을 고르면 직접 입력은 비운다
-                setSelected(selected === i ? null : i)
+                // 다시 누르면 그 칩만 해제. 칩을 고르기 시작하면 직접 입력은 비운다
+                setSelected((prev) =>
+                  prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i],
+                )
                 setText('')
               }}
             >
@@ -98,17 +104,17 @@ export function QuestionBlock({
           onChange={(e) => {
             setText(e.target.value)
             // 직접 입력을 시작하면 골라둔 칩은 놓는다
-            if (selected !== null) setSelected(null)
+            if (selected.length > 0) setSelected([])
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && canSend) void onAnswer(q, value, selected)
+            if (e.key === 'Enter' && canSend) void onAnswer(q, value, optionIdx)
           }}
           placeholder="직접 입력"
         />
         <button
           className="btn"
           disabled={!canSend}
-          onClick={() => canSend && void onAnswer(q, value, selected)}
+          onClick={() => canSend && void onAnswer(q, value, optionIdx)}
         >
           답변 보내기
         </button>

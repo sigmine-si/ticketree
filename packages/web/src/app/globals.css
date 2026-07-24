@@ -220,7 +220,7 @@ tbody tr:hover { background: #fafaf7; }
 .callout .ct { font-weight: 600; color: var(--amber); }
 
 /* ───────────────────────── 새 요청 모달 */
-.overlay { position: fixed; inset: 0; background: rgb(27 31 28 / 45%); display: flex; align-items: flex-start; justify-content: center; padding: 7vh 20px 20px; z-index: 50; animation: fade 0.15s ease; overflow-y: auto; }
+.overlay { position: fixed; inset: 0; background: rgb(27 31 28 / 45%); display: flex; align-items: flex-start; justify-content: center; padding: 7vh 20px 20px; z-index: 50; animation: fade 0.15s ease; overflow-y: auto; overscroll-behavior: contain; }
 @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .modal { background: var(--paper); border-radius: 14px; width: 100%; max-width: 560px; padding: 26px 28px 24px; box-shadow: 0 24px 60px rgb(27 31 28 / 18%); }
 .modal h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
@@ -235,7 +235,7 @@ tbody tr:hover { background: #fafaf7; }
 .mfoot { display: flex; align-items: center; gap: 9px; margin-top: 22px; }
 .mfoot .hint { font-size: 12px; color: var(--faint); margin-right: auto; line-height: 1.5; }
 
-.chat { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding: 4px 2px; margin: 16px 0 10px; }
+.chat { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 2px; margin: 16px 0 10px; }
 .msg { max-width: 88%; border-radius: 12px; padding: 10px 14px; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; }
 .msg.user { align-self: flex-end; background: var(--green-tint); color: var(--green-deep); }
 .msg.user .as { display: block; font-size: 12px; color: var(--sub); margin-bottom: 3px; }
