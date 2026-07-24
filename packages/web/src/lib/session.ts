@@ -17,6 +17,16 @@ loadRootEnv()
 const COOKIE = 'tt_session'
 const SECRET = process.env.SESSION_SECRET ?? 'dev-only-insecure-secret'
 
+/**
+ * secure 쿠키는 HTTPS에서만 저장·전송된다. 판정을 NODE_ENV가 아니라 **실제 서빙
+ * 프로토콜(APP_ORIGIN)** 로 한다.
+ *
+ * 이유: 로컬·Tailscale 데모는 프로덕션 빌드(NODE_ENV=production)를 http 로 서빙한다.
+ * NODE_ENV 로 판정하면 그 환경에서 secure 쿠키가 나가고, http 라 브라우저가 저장을
+ * 거부해 로그인이 통째로 안 붙는다. APP_ORIGIN 이 https 일 때만 secure 를 켠다.
+ */
+const COOKIE_SECURE = (process.env.APP_ORIGIN ?? '').startsWith('https://')
+
 export interface Session {
   userId: string
   /** admin은 null — 프로젝트에 묶이지 않는다 */
@@ -61,7 +71,7 @@ export async function setSession(s: Session): Promise<void> {
   ;(await cookies()).set(COOKIE, serialize(s), {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: COOKIE_SECURE,
     path: '/',
     maxAge: 60 * 60 * 24 * 30,
   })
